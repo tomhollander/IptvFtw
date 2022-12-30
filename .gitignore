@@ -5,3 +5,6 @@
 /.vs/IptvFtw
 /IptvFtw/bin/x86/Debug
 /IptvFtw/obj
+/IptvFtw/AppPackages
+/IptvFtw/bin
+/IptvFtw/BundleArtifacts

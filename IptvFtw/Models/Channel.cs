@@ -18,7 +18,19 @@ namespace IptvFtw.Models
         public string ChannelNumber { get; set; }
         public string StreamUrl { get; set; }
 
-        public Uri StreamUri { get { return String.IsNullOrEmpty(StreamUrl) ? null : new Uri(StreamUrl); } }
+        public Uri StreamUri { 
+            get 
+            { 
+                try
+                {
+                    return String.IsNullOrEmpty(StreamUrl) ? null : new Uri(StreamUrl);
+                }
+                catch
+                {
+                    return null;
+                }
+            } 
+        }
 
         public string UserAgent { get; set; }
         public string Referer { get; set; }
