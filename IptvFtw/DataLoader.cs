@@ -52,7 +52,8 @@ namespace IptvFtw
                         Referer = splitUrlLine.Length > 1 ? GetNamedUrlAttribute(splitUrlLine[1], "referer") : null,
                     };
 
-                    if (!channel.DisplayName.EndsWith(" Alt"))
+                    // Only show a max of 250 channels in this app, as some playlists are really big.
+                    if (!channel.DisplayName.EndsWith(" Alt") && channels.Count < 250) 
                     {
                         channels.Add(channel);
                     }
@@ -90,10 +91,24 @@ namespace IptvFtw
 
         public static async Task LoadTvPrograms(MainModel model)
         {
-            XDocument epgDoc = await GetEpg(model.EpgUrl);
-            model.TvPrograms = GetTvPrograms(epgDoc);
+
+            model.TvPrograms = new List<TvProgram>();
+            var splitUrls = model.EpgUrl.Split(",");
+            Parallel.ForEach(splitUrls, async url =>
+            {
+                try
+                {
+                    XDocument epgDoc = await GetEpg(url);
+                    model.TvPrograms.AddRange(GetTvPrograms(epgDoc));
+                }
+                catch
+                {
+
+                }
+            });
 
         }
+        
 
         private static async Task<XDocument> GetEpg(string epgUri)
         {
@@ -136,16 +151,24 @@ namespace IptvFtw
             var programs = epgDocument.Descendants("programme").ToList();
             foreach (var program in programs)
             {
-                tvPrograms.Add(new TvProgram()
+                try
                 {
-                    ChannelId = program.Attribute("channel").Value,
-                    Title = program.Descendants("title").SingleOrDefault()?.Value,
-                    Subtitle = program.Descendants("sub-title").SingleOrDefault()?.Value,
-                    Description = program.Descendants("desc").SingleOrDefault()?.Value,
-                    Start = ParseEpgDate(program.Attribute("start").Value),
-                    End = ParseEpgDate(program.Attribute("stop").Value),
+                    tvPrograms.Add(new TvProgram()
+                    {
+                        ChannelId = program.Attribute("channel").Value,
+                        Title = program.Descendants("title").SingleOrDefault()?.Value,
+                        Subtitle = program.Descendants("sub-title").SingleOrDefault()?.Value,
+                        Description = program.Descendants("desc").SingleOrDefault()?.Value,
+                        Start = ParseEpgDate(program.Attribute("start").Value),
+                        End = ParseEpgDate(program.Attribute("stop").Value),
 
-                });
+                    });
+                }
+                catch
+                {
+
+                }
+
             }
             return tvPrograms;
 

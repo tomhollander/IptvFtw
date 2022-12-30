@@ -175,7 +175,12 @@ namespace IptvFtw
 
         private void ShowControls()
         {
-            //GetCurrentProgram();
+
+            _model.CurrentTvProgram = _model.TvPrograms?.Where(
+                p => p.ChannelId == _model.SelectedChannel?.GuideId &&
+                     p.Start <= DateTime.Now &&
+                     p.End >= DateTime.Now).FirstOrDefault();
+
             topControls.Visibility = Visibility.Visible;
             channelsListView.Focus(FocusState.Programmatic);
         }

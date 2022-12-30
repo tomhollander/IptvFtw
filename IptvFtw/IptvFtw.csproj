@@ -119,6 +119,7 @@
     <Compile Include="App.xaml.cs">
       <DependentUpon>App.xaml</DependentUpon>
     </Compile>
+    <Compile Include="Converters\NullToVisibilityConverter.cs" />
     <Compile Include="CustomMediaTransportControls.cs" />
     <Compile Include="DataLoader.cs" />
     <Compile Include="MainPage.xaml.cs">
