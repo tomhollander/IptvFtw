@@ -72,7 +72,11 @@ namespace IptvFtw
                 try
                 {
                     _model.Channels = await DataLoader.LoadChannelsFromTvIrlPlaylist(_model.PlaylistUrl);
-                    _model.SelectedChannel = _model.Channels.First();
+                    _model.SelectedChannel = _model.Channels.Where(c => c.Id == _model.LastChannelId).FirstOrDefault();
+                    if (_model.SelectedChannel == null )
+                    {
+                        _model.SelectedChannel = _model.Channels.First();
+                    }
                     playlistErrorTextBlock.Visibility = Visibility.Collapsed;
                     splitView.IsPaneOpen = false;
                     ShowControls();
@@ -103,7 +107,9 @@ namespace IptvFtw
             if (_model.SelectedChannel != newChannel)
             {
                 _model.SelectedChannel = newChannel;
+                _model.LastChannelId = newChannel?.Id;
                 PlayChannel();
+                SaveSettings();
             }
         }
 
@@ -222,7 +228,7 @@ namespace IptvFtw
         }
         private void SaveSettings()
         {
-            ApplicationData.Current.LocalSettings.Values["LastChannel"] = _model.SelectedChannel?.Id;
+            ApplicationData.Current.LocalSettings.Values["LastChannel"] = _model.LastChannelId;
             ApplicationData.Current.LocalSettings.Values["PlaylistUrl"] = _model.PlaylistUrl;
         }
 
