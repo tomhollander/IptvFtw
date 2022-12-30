@@ -16,7 +16,7 @@
         <Setter Property="Template">
             <Setter.Value>
                 <ControlTemplate TargetType="local:CustomMediaTransportControls">
-                    <Grid x:Name="RootGrid" Background="Transparent" Padding="10">
+                    <Grid x:Name="RootGrid" Background="Transparent">
                         <Grid.Resources>
                             <!-- New AppBar button style 48x48 pixels in size -->
                             <Style x:Key="AppBarButtonStyle" TargetType="AppBarButton">

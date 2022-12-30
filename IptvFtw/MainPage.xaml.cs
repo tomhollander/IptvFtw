@@ -71,7 +71,7 @@ namespace IptvFtw
             {
                 try
                 {
-                    _model.Channels = await DataLoader.LoadChannelsFromTvIrlPlaylist(_model.PlaylistUrl);
+                    await DataLoader.LoadChannelsFromTvIrlPlaylist(_model.PlaylistUrl, _model);
                     _model.SelectedChannel = _model.Channels.Where(c => c.Id == _model.LastChannelId).FirstOrDefault();
                     if (_model.SelectedChannel == null )
                     {
@@ -82,6 +82,12 @@ namespace IptvFtw
                     ShowControls();
                     await PlayChannel();
 
+                    if (_model.EpgUrl != null)
+                    {
+                        await DataLoader.LoadTvPrograms(_model);
+                    }
+                    
+
                 }
                 catch (Exception ex)
                 {
@@ -90,8 +96,6 @@ namespace IptvFtw
                     playlistErrorTextBlock.Visibility = Visibility.Visible;
                 }
             }
-            //_model.PlaylistUrl = "https://i.mjh.nz/nz/kodi-tv.m3u8";// "https://i.mjh.nz/au/Sydney/kodi-tv.m3u8";
-
         }
 
         private async void ApplyPlaylistUrl_Tapped(object sender, TappedRoutedEventArgs e)
@@ -108,7 +112,12 @@ namespace IptvFtw
             {
                 _model.SelectedChannel = newChannel;
                 _model.LastChannelId = newChannel?.Id;
-                PlayChannel();
+                _model.CurrentTvProgram = _model.TvPrograms?.Where(
+                    p => p.ChannelId == newChannel?.GuideId &&
+                         p.Start <= DateTime.Now &&
+                         p.End >= DateTime.Now).FirstOrDefault();
+
+                await PlayChannel();
                 SaveSettings();
             }
         }

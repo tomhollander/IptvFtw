@@ -126,6 +126,7 @@
     </Compile>
     <Compile Include="Models\Channel.cs" />
     <Compile Include="Models\MainModel.cs" />
+    <Compile Include="Models\TvProgram.cs" />
     <Compile Include="Properties\AssemblyInfo.cs" />
   </ItemGroup>
   <ItemGroup>

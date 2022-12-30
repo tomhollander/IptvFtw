@@ -58,21 +58,11 @@
                                 </ListView.ItemsPanel>
                             </ListView>
                             <TextBlock HorizontalAlignment="Center" Text="{Binding SelectedChannel.DisplayName}" Margin="20,0,20,10" Foreground="White" FontWeight="Bold" />
-                            <TextBlock HorizontalAlignment="Center" Text="{Binding CurrentProgram}" Margin="20,0,20,10" Foreground="White" />
-                            <TextBlock HorizontalAlignment="Center" Text="{Binding CurrentProgramDescription}" Margin="20,0,20,10" Foreground="White" TextWrapping="Wrap" FontSize="11" />
+                            <TextBlock HorizontalAlignment="Center" Text="{Binding CurrentTvProgram.TitleAndSubtitle}" Margin="20,0,20,10" Foreground="White" />
+                            <TextBlock HorizontalAlignment="Center" Text="{Binding CurrentTvProgram.Description}" Margin="20,0,20,10" Foreground="White" TextWrapping="Wrap" FontSize="11" />
                         </StackPanel>
                     </Grid>
 
-                    <!--<Grid x:Name="bottomControls" RelativePanel.AlignBottomWithPanel="True" RelativePanel.AlignLeftWithPanel="True" RelativePanel.AlignRightWithPanel="True">
-                        -->
-                    <!--<Rectangle  Fill="Gray" Opacity="0.5"/>-->
-                    <!--
-                        <StackPanel Orientation="Horizontal" HorizontalAlignment="Center">
-                            <AppBarButton ToolTipService.ToolTip="Pin Channel" Height="50" Icon="Pin" Click="PinAppBarButton_Click"/>
-                            <AppBarButton ToolTipService.ToolTip="TV Guide" Height="50" Icon="List"   Click="TVGuideAppBarButton_Click" />
-                            <AppBarButton ToolTipService.ToolTip="Settings" Height="50" Icon="Setting" Click="SettingsAppBarButton_Click"/>
-                        </StackPanel>
-                    </Grid>-->
                 </RelativePanel>
 
             </Grid>

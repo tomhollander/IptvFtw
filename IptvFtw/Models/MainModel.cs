@@ -20,6 +20,17 @@ namespace IptvFtw.Models
             }
         }
 
+        private string _epgUrl { get; set; }
+        public string EpgUrl
+        {
+            get { return _epgUrl; }
+            set
+            {
+                _epgUrl = value;
+                RaisePropertyChanged(nameof(EpgUrl));
+            }
+        }
+
         public string LastChannelId { get; set; }
 
         private List<Channel> _channels;
@@ -42,6 +53,28 @@ namespace IptvFtw.Models
             {
                 _selectedChannel = value;
                 RaisePropertyChanged(nameof(SelectedChannel));
+            }
+        }
+
+        private List<TvProgram> _tvPrograms;
+        public List<TvProgram> TvPrograms
+        {
+            get { return _tvPrograms; }
+            set
+            {
+                _tvPrograms = value;
+                RaisePropertyChanged(nameof(TvPrograms));
+            }
+        }
+
+        private TvProgram _currentTvProgram;
+        public TvProgram CurrentTvProgram
+        {
+            get { return _currentTvProgram; }
+            set
+            {
+                _currentTvProgram = value;
+                RaisePropertyChanged(nameof(CurrentTvProgram));
             }
         }
 
