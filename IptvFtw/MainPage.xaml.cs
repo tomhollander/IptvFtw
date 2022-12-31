@@ -252,8 +252,11 @@ namespace IptvFtw
         {
             _model.PlaylistUrl = (string) ApplicationData.Current.LocalSettings.Values["PlaylistUrl"];
             _model.LastChannelId = (string)ApplicationData.Current.LocalSettings.Values["LastChannel"];
-            _model.RecentPlaylistUrls = new ObservableCollection<string>(((string)ApplicationData.Current.LocalSettings.Values["RecentPlaylistUrls"])?.Split("|").ToList());
-
+            var recentPlaylists = ((string)ApplicationData.Current.LocalSettings.Values["RecentPlaylistUrls"])?.Split("|").ToList();
+            if (recentPlaylists != null)
+            {
+                _model.RecentPlaylistUrls = new ObservableCollection<string>(recentPlaylists);
+            }
 
         }
         private void SaveSettings()
