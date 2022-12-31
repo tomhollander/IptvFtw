@@ -1,5 +1,6 @@
 ﻿using System;
 using System.Collections.Generic;
+using System.Collections.ObjectModel;
 using System.ComponentModel;
 using System.Linq;
 using System.Text;
@@ -78,6 +79,17 @@ namespace IptvFtw.Models
             }
         }
 
+        private ObservableCollection<String> _recentPlaylistUrls;
+        public ObservableCollection<String> RecentPlaylistUrls
+        {
+            get { return _recentPlaylistUrls; }
+            set
+            {     
+                _recentPlaylistUrls = value;
+                RaisePropertyChanged(nameof(RecentPlaylistUrls));
+            }
+        }
+        
         public event PropertyChangedEventHandler PropertyChanged;
 
         public void RaisePropertyChanged(string property)

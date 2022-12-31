@@ -1,6 +1,7 @@
 ﻿using IptvFtw.Models;
 using System;
 using System.Collections.Generic;
+using System.Collections.ObjectModel;
 using System.Diagnostics;
 using System.IO;
 using System.Linq;
@@ -53,10 +54,6 @@ namespace IptvFtw
             {
             }
 
-            if (mediaElement.CurrentState != MediaElementState.Playing)
-            {
-                await PlayChannel();
-            }
             base.OnNavigatedTo(e);
             channelsListView.Focus(FocusState.Programmatic);
         }
@@ -79,6 +76,8 @@ namespace IptvFtw
                     }
                     playlistErrorTextBlock.Visibility = Visibility.Collapsed;
                     splitView.IsPaneOpen = false;
+                    PushRecentPlaylistUrl();
+                    SaveSettings();
                     ShowControls();
                     await PlayChannel();
 
@@ -98,11 +97,27 @@ namespace IptvFtw
             }
         }
 
+        private void PushRecentPlaylistUrl()
+        {
+            if (_model.RecentPlaylistUrls == null)
+            {
+                _model.RecentPlaylistUrls = new ObservableCollection<string>();
+            }
+            // Remove it if it's there already
+            _model.RecentPlaylistUrls.Remove(_model.PlaylistUrl);
+            _model.RecentPlaylistUrls.Insert(0, _model.PlaylistUrl);
+
+            if (_model.RecentPlaylistUrls.Count > 10)
+            {
+                _model.RecentPlaylistUrls.RemoveAt(9);
+            }
+
+        }
+
         private async void ApplyPlaylistUrl_Tapped(object sender, TappedRoutedEventArgs e)
         {
             _model.PlaylistUrl = playlistUrlTextBox.Text;
             await LoadData();
-            SaveSettings();
         }
 
         private async void ChannelsListView_SelectionChanged(object sender, SelectionChangedEventArgs e)
@@ -237,15 +252,21 @@ namespace IptvFtw
         {
             _model.PlaylistUrl = (string) ApplicationData.Current.LocalSettings.Values["PlaylistUrl"];
             _model.LastChannelId = (string)ApplicationData.Current.LocalSettings.Values["LastChannel"];
-            
+            _model.RecentPlaylistUrls = new ObservableCollection<string>(((string)ApplicationData.Current.LocalSettings.Values["RecentPlaylistUrls"])?.Split("|").ToList());
+
 
         }
         private void SaveSettings()
         {
             ApplicationData.Current.LocalSettings.Values["LastChannel"] = _model.LastChannelId;
             ApplicationData.Current.LocalSettings.Values["PlaylistUrl"] = _model.PlaylistUrl;
+            ApplicationData.Current.LocalSettings.Values["RecentPlaylistUrls"] = String.Join("|", _model.RecentPlaylistUrls);
         }
 
+        private void RecentPlaylistUrl_Tapped(object sender, TappedRoutedEventArgs e)
+        {
+            playlistUrlTextBox.Text = ((TextBlock)sender).Text;
+        }
     }
 
 }
