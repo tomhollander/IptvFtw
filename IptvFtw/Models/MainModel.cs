@@ -10,14 +10,25 @@ namespace IptvFtw.Models
 {
     public class MainModel : INotifyPropertyChanged
     {
-        private string _playlistUrl { get; set;  }
-        public string PlaylistUrl
+        private ObservableCollection<Playlist> _playlists;
+        public ObservableCollection<Playlist> Playlists
         {
-            get { return _playlistUrl; }
+            get { return _playlists; }
             set
             {
-                _playlistUrl = value;
-                RaisePropertyChanged(nameof(PlaylistUrl));
+                _playlists = value;
+                RaisePropertyChanged(nameof(Playlists));
+            }
+        }
+
+        private Playlist _currentPlaylist { get; set;  }
+        public Playlist CurrentPlaylist
+        {
+            get { return _currentPlaylist; }
+            set
+            {
+                _currentPlaylist = value;
+                RaisePropertyChanged(nameof(CurrentPlaylist));
             }
         }
 
@@ -33,17 +44,6 @@ namespace IptvFtw.Models
         }
 
         public string LastChannelId { get; set; }
-
-        private List<Channel> _channels;
-        public List<Channel> Channels
-        {
-            get { return _channels; }
-            set
-            {
-                _channels = value;
-                RaisePropertyChanged(nameof(Channels));
-            }
-        }
 
         private Channel _selectedChannel;
 
@@ -79,17 +79,6 @@ namespace IptvFtw.Models
             }
         }
 
-        private ObservableCollection<String> _recentPlaylistUrls;
-        public ObservableCollection<String> RecentPlaylistUrls
-        {
-            get { return _recentPlaylistUrls; }
-            set
-            {     
-                _recentPlaylistUrls = value;
-                RaisePropertyChanged(nameof(RecentPlaylistUrls));
-            }
-        }
-        
         public event PropertyChangedEventHandler PropertyChanged;
 
         public void RaisePropertyChanged(string property)

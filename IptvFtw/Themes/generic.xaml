@@ -764,7 +764,7 @@
                                                     <FontIcon Glyph="&#xE799;"/>
                                                 </AppBarButton.Icon>
                                             </AppBarButton>
-                                            <AppBarButton x:Name="SettingsButton" ToolTipService.ToolTip="Settings" Icon="Setting" 
+                                            <AppBarButton x:Name="SettingsButton" ToolTipService.ToolTip="Playlists" Icon="AllApps" 
                                                           Style='{StaticResource AppBarButtonStyle}'/>
                                             <AppBarButton x:Name='CastButton'
                                                 Style='{StaticResource AppBarButtonStyle}'

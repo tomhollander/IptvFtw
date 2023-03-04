@@ -30,6 +30,7 @@ namespace IptvFtw
         {
             this.InitializeComponent();
             this.Suspending += OnSuspending;
+            this.RequiresPointerMode = Windows.UI.Xaml.ApplicationRequiresPointerMode.WhenRequested;
         }
 
         /// <summary>

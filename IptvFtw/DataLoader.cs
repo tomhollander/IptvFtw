@@ -17,12 +17,12 @@ namespace IptvFtw
 {
     internal static class DataLoader
     {
-        public static async Task LoadChannelsFromTvIrlPlaylist(string playlistUrl, MainModel model)
+        public static async Task LoadChannelsFromTvIrlPlaylist(Playlist playlist)
         {
             var channels = new List<Channel>();
             var client = new HttpClient();
 
-            var playlistContent = await client.GetStringAsync(playlistUrl);
+            var playlistContent = await client.GetStringAsync(playlist.Url);
 
             var playlistLines = playlistContent.Split('\n');
             int i = 0;
@@ -30,7 +30,7 @@ namespace IptvFtw
             {
                 if (playlistLines[i].StartsWith("#EXTM3U"))
                 {
-                    model.EpgUrl = GetNamedMetadataAttribute(playlistLines[i], "x-tvg-url");
+                    playlist.EpgUrl = GetNamedMetadataAttribute(playlistLines[i], "x-tvg-url");
                 }
 
                 var line = playlistLines[i];
@@ -63,7 +63,7 @@ namespace IptvFtw
                 i++;
 
             }
-            model.Channels = channels.OrderBy(c => c.ChannelNumber ?? "zzz").ThenBy(c => c.DisplayName).ToList();
+            playlist.Channels = new System.Collections.ObjectModel.ObservableCollection<Channel>(channels.OrderBy(c => c.ChannelNumber ?? "zzz").ThenBy(c => c.DisplayName).ToList());
 
         }
 

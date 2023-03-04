@@ -7,7 +7,8 @@
     xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
     xmlns:conv="using:IptvFtw.Converters"
     mc:Ignorable="d"
-    Background="{ThemeResource ApplicationPageBackgroundThemeBrush}">
+    Background="{ThemeResource ApplicationPageBackgroundThemeBrush}"
+    KeyUp="Page_KeyUp">
 
     <Page.Resources>
         <conv:NullToVisibilityConverter x:Key="nullToVisibilityConverter" />
@@ -16,22 +17,51 @@
     <SplitView PanePlacement="Right" DisplayMode="Overlay" IsPaneOpen="False" x:Name="splitView">
         <SplitView.Pane>
             <Grid Margin="10">
-                <StackPanel>
-                    <TextBlock Style="{ThemeResource TitleTextBlockStyle}">Settings</TextBlock>
-                    <TextBlock Margin="0,10,0,0">Channel Playlist URL</TextBlock>
-                    <TextBox Margin="0,10,0,0" x:Name="playlistUrlTextBox" Text="{Binding PlaylistUrl, Mode=OneWay}" />
-                    <TextBlock  Margin="0,10,0,0" Style="{ThemeResource CaptionTextBlockStyle}">URL to an IPTV playlist (m3u8 format) that
-                        contains the channel defintions you want to view. <Hyperlink NavigateUri="https://github.com/tomhollander/IptvFtw/wiki/Playlist-sources">More information</Hyperlink></TextBlock>
-                    <Button Tapped="ApplyPlaylistUrl_Tapped" Margin="0,10,0,0">Apply</Button>
-                    <TextBlock Margin="0,10,0,0" Foreground="Red" x:Name="playlistErrorTextBlock" Visibility="Collapsed" Text="Something really bad happened." TextWrapping="Wrap"/>
-                    <TextBlock Margin="0,30,0,0" Visibility="{Binding RecentPlaylistUrls, Converter={StaticResource nullToInvisibilityConverter}}">Recent playlists:</TextBlock>
-                    <ListView ItemsSource="{Binding RecentPlaylistUrls}">
+                <StackPanel x:Name="listPlaylists">
+                    <TextBlock Style="{ThemeResource TitleTextBlockStyle}">Playlists</TextBlock>
+                    <ListView x:Name="playlistsListView" ItemsSource="{Binding Playlists}" SelectionChanged="PlaylistsListView_SelectionChanged">
                         <ListView.ItemTemplate>
                             <DataTemplate>
-                                <TextBlock FontSize="12" Margin="0" Text="{Binding}" Tapped="RecentPlaylistUrl_Tapped"></TextBlock>
+                                <StackPanel Orientation="Horizontal" HorizontalAlignment="Stretch">
+                                    <TextBlock VerticalAlignment="Center" Margin="10" Text="{Binding Name}" Width="180"></TextBlock>
+                                    <Button  Width="40">
+                                        <SymbolIcon Symbol="Edit" />
+                                    </Button>
+                                    <Button  Width="40">
+                                        <SymbolIcon Symbol="Delete" />
+                                    </Button>
+                                </StackPanel>
+
+                         
                             </DataTemplate>
                         </ListView.ItemTemplate>
                     </ListView>
+                    <Button Margin="10">
+                        <SymbolIcon Symbol="Add" ToolTipService.ToolTip="Add Playlist" Tapped="AddPlaylist_Tapped" />
+                    </Button>
+                </StackPanel>
+                <StackPanel x:Name="addEditPlaylist" Visibility="Collapsed">
+                    <TextBlock Style="{ThemeResource TitleTextBlockStyle}">Settings</TextBlock>
+                    <TextBlock Margin="0,10,0,0">Channel Playlist URL</TextBlock>
+                    <TextBox Margin="0,10,0,0" x:Name="playlistUrlTextBox" Text="{Binding Url, Mode=OneWay}" />
+                    <TextBlock  Margin="0,10,0,0" Style="{ThemeResource CaptionTextBlockStyle}">URL to an IPTV playlist (m3u8 format) that
+                        contains the channel defintions you want to view. <Hyperlink NavigateUri="https://github.com/tomhollander/IptvFtw/wiki/Playlist-sources">More information</Hyperlink></TextBlock>
+                    <Button Tapped="ApplyPlaylistUrl_Tapped" Margin="0,10,0,0">Load</Button>
+                    <TextBlock Margin="0,10,0,0" Foreground="Red" x:Name="playlistErrorTextBlock" Visibility="Collapsed" Text="Something really bad happened." TextWrapping="Wrap"/>
+                    <TextBlock Margin="0,10,0,0" x:Name="playlistNameCaption">Playlist Name</TextBlock>
+                    <TextBox Margin="0,10,0,0" x:Name="playlistName" Text="{Binding Name, Mode=OneWay}" />
+                    <TextBlock Margin="0,10,0,0" x:Name="includeChannelsCaption">Include channels</TextBlock>
+                    <ListView x:Name="includeChannels">
+                        <ListView.ItemTemplate>
+                            <DataTemplate>
+                                <CheckBox></CheckBox>
+                            </DataTemplate>
+                        </ListView.ItemTemplate>
+                    </ListView>
+                    <StackPanel Orientation="Horizontal">
+                        <Button x:Name="saveButton" Tapped="saveButton_Tapped" Margin="10"  IsEnabled="False">Save</Button>
+                        <Button x:Name="cancelButton" Tapped="cancelButton_Tapped" Margin="10">Cancel</Button>
+                    </StackPanel>
                 </StackPanel>
 
             </Grid>
@@ -42,10 +72,11 @@
                 <MediaElement  Tapped="MediaElement_Tapped" x:Name="mediaElement" AreTransportControlsEnabled="True">
                     <MediaElement.TransportControls>
                         <local:CustomMediaTransportControls x:Name="transportControls" IsSeekBarVisible="False" IsFullWindowButtonVisible="True" IsZoomButtonVisible="False" 
-                                                            Tapped="MediaTransportControls_Tapped" SettingsClick="SettingsAppBarButton_Click"  />
+                                                            Tapped="MediaTransportControls_Tapped" SettingsClick="SettingsAppBarButton_Click" />
                     </MediaElement.TransportControls>
                 </MediaElement>
-
+                <TextBlock x:Name="channelNumberTextBlock"  Visibility="Collapsed" Margin="100,200,0,0"  Text="123"  FontSize="100" FontFamily="Consolas" XYFocusKeyboardNavigation="Disabled" HorizontalAlignment="Left" VerticalAlignment="Top" >
+                </TextBlock>
                 <RelativePanel>
                     <Grid x:Name="topControls" RelativePanel.AlignTopWithPanel="True" RelativePanel.AlignLeftWithPanel="True" RelativePanel.AlignRightWithPanel="True">
                         <Rectangle  Fill="Gray" Opacity="0.5" />
@@ -55,7 +86,7 @@
                               ScrollViewer.HorizontalScrollBarVisibility="Auto"
                               ScrollViewer.HorizontalScrollMode="Enabled"  
                               ScrollViewer.VerticalScrollMode="Disabled"
-                              ItemsSource="{Binding Channels}" 
+                              ItemsSource="{Binding CurrentPlaylist.Channels}" 
                               SelectedItem="{Binding SelectedChannel}" 
                               HorizontalAlignment="Center" 
                               SelectionChanged="ChannelsListView_SelectionChanged" SingleSelectionFollowsFocus="False" KeyUp="channelsListView_KeyUp">
@@ -63,7 +94,7 @@
                                     <DataTemplate>
                                         <Grid>
                                             <TextBlock Text="{Binding DisplayName}"  Visibility="{Binding IconUri, Converter={StaticResource nullToVisibilityConverter}}" TextWrapping="Wrap"  VerticalAlignment="Center" HorizontalAlignment="Center" Height="70" Width="70" Margin="10" />
-                                            <Image Source="{Binding IconUri}" Height="70" Width="70" Margin="10"  />               
+                                            <Image Source="{Binding IconUri}" Height="70" Width="70" Margin="10" ToolTipService.ToolTip="{Binding DisplayNameAndChannelNumber}" />               
                                         </Grid>
                                     </DataTemplate>
                                 </ListView.ItemTemplate>

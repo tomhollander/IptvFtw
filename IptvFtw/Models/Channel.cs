@@ -13,9 +13,24 @@ namespace IptvFtw.Models
         public string DisplayName { get; set; }
         public string GuideId { get; set; }
         public string IconUrl { get; set; }
+
+        public bool Included { get; set; }
         public Uri IconUri { get { return String.IsNullOrEmpty(IconUrl) ? null : new Uri(IconUrl); } }
 
         public string ChannelNumber { get; set; }
+
+        public string DisplayNameAndChannelNumber
+        {
+            get
+            {
+                string result = DisplayName;
+                if (ChannelNumber != null)
+                {
+                    result += $" [{ChannelNumber}]";
+                }
+                return result;
+            }
+        }
         public string StreamUrl { get; set; }
 
         public Uri StreamUri { 
