@@ -23,7 +23,13 @@ namespace IptvFtw.Models
             {
                 _channels = value;
                 RaisePropertyChanged(nameof(Channels));
+                RaisePropertyChanged(nameof(IncludedChannels));
             }
+        }
+
+        public ObservableCollection<Channel> IncludedChannels
+        {
+            get { return _channels == null ? null : new ObservableCollection<Channel>(_channels.Where(ch => ch.Included).ToList()); }
         }
 
         public event PropertyChangedEventHandler PropertyChanged;

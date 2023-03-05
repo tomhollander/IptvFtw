@@ -42,7 +42,7 @@ namespace IptvFtw
 
                     var channel = new Channel()
                     {
-                        Id = GetNamedMetadataAttribute(line, "channel-id"),
+                        Id = GetNamedMetadataAttribute(line, "channel-id") ?? GetNamedMetadataAttribute(line, "tvg-id"),
                         DisplayName = line.Substring(lastComma + 1),
                         GuideId = GetNamedMetadataAttribute(line, "tvg-id"),
                         ChannelNumber = GetNamedMetadataAttribute(line, "tvg-chno"),
@@ -50,10 +50,11 @@ namespace IptvFtw
                         StreamUrl = splitUrlLine[0],
                         UserAgent = splitUrlLine.Length > 1 ? GetNamedUrlAttribute(splitUrlLine[1], "user-agent") : null,
                         Referer = splitUrlLine.Length > 1 ? GetNamedUrlAttribute(splitUrlLine[1], "referer") : null,
+                        Included = true,
                     };
 
                     // Only show a max of 250 channels in this app, as some playlists are really big.
-                    if (!channel.DisplayName.EndsWith(" Alt") && channels.Count < 250) 
+                    //if (!channel.DisplayName.EndsWith(" Alt") && channels.Count < 250) 
                     {
                         channels.Add(channel);
                     }

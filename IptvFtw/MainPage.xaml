@@ -51,10 +51,10 @@
                     <TextBlock Margin="0,10,0,0" x:Name="playlistNameCaption">Playlist Name</TextBlock>
                     <TextBox Margin="0,10,0,0" x:Name="playlistName" Text="{Binding Name, Mode=OneWay}" />
                     <TextBlock Margin="0,10,0,0" x:Name="includeChannelsCaption">Include channels</TextBlock>
-                    <ListView x:Name="includeChannels">
+                    <ListView x:Name="includeChannelsListView" Height="500">
                         <ListView.ItemTemplate>
                             <DataTemplate>
-                                <CheckBox></CheckBox>
+                                <CheckBox Content="{Binding DisplayName}" IsChecked="{Binding Included,Mode=TwoWay}"></CheckBox>
                             </DataTemplate>
                         </ListView.ItemTemplate>
                     </ListView>
@@ -86,7 +86,7 @@
                               ScrollViewer.HorizontalScrollBarVisibility="Auto"
                               ScrollViewer.HorizontalScrollMode="Enabled"  
                               ScrollViewer.VerticalScrollMode="Disabled"
-                              ItemsSource="{Binding CurrentPlaylist.Channels}" 
+                              ItemsSource="{Binding CurrentPlaylist.IncludedChannels}" 
                               SelectedItem="{Binding SelectedChannel}" 
                               HorizontalAlignment="Center" 
                               SelectionChanged="ChannelsListView_SelectionChanged" SingleSelectionFollowsFocus="False" KeyUp="channelsListView_KeyUp">

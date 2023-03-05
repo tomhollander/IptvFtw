@@ -134,6 +134,7 @@ namespace IptvFtw
                 await DataLoader.LoadChannelsFromTvIrlPlaylist(unsavedPlaylist);
                 if (unsavedPlaylist.Channels.Count > 0) {
                     ToggleAddEditPlaylistControls(Visibility.Visible);
+                    includeChannelsListView.ItemsSource = unsavedPlaylist.Channels;
                 }
                 else
                 {
@@ -155,6 +156,7 @@ namespace IptvFtw
             playlistNameCaption.Visibility = visibility;
             playlistName.Visibility = visibility;
             includeChannelsCaption.Visibility = visibility;
+            includeChannelsListView.Visibility = visibility;
             saveButton.IsEnabled = visibility == Visibility.Visible;
         }
 
@@ -413,7 +415,7 @@ namespace IptvFtw
             {
                 await LoadChannelsForPlaylist(_model.CurrentPlaylist);
             }
-            _model.SelectedChannel = _model.CurrentPlaylist.Channels.FirstOrDefault();
+            _model.SelectedChannel = _model.CurrentPlaylist.IncludedChannels.FirstOrDefault();
             await PlayChannel();
             splitView.IsPaneOpen = false;
             ShowControls();
@@ -427,16 +429,18 @@ namespace IptvFtw
             addEditPlaylist.Visibility = Visibility.Visible;
         }
 
-        private void saveButton_Tapped(object sender, TappedRoutedEventArgs e)
+        private async void saveButton_Tapped(object sender, TappedRoutedEventArgs e)
         {
             unsavedPlaylist.Name = String.IsNullOrEmpty(playlistName.Text) ?  unsavedPlaylist.Url : playlistName.Text;
             _model.Playlists.Add(unsavedPlaylist);
             _model.CurrentPlaylist = unsavedPlaylist;
-            PlayChannel();
+            _model.SelectedChannel = _model.CurrentPlaylist.IncludedChannels.FirstOrDefault();
+            await PlayChannel();
 
             splitView.IsPaneOpen = false;
             listPlaylists.Visibility = Visibility.Visible;
             addEditPlaylist.Visibility = Visibility.Collapsed;
+            ShowControls();
         }
 
         private void cancelButton_Tapped(object sender, TappedRoutedEventArgs e)
