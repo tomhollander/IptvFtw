@@ -24,10 +24,10 @@
                             <DataTemplate>
                                 <StackPanel Orientation="Horizontal" HorizontalAlignment="Stretch">
                                     <TextBlock VerticalAlignment="Center" Margin="10" Text="{Binding Name}" Width="180"></TextBlock>
-                                    <Button  Width="40">
+                                    <Button  Width="40" Tapped="editPlaylistButton_Tapped">
                                         <SymbolIcon Symbol="Edit" />
                                     </Button>
-                                    <Button  Width="40">
+                                    <Button  Width="40" Tapped="deletePlaylistButton_Tapped">
                                         <SymbolIcon Symbol="Delete" />
                                     </Button>
                                 </StackPanel>
@@ -36,8 +36,8 @@
                             </DataTemplate>
                         </ListView.ItemTemplate>
                     </ListView>
-                    <Button Margin="10">
-                        <SymbolIcon Symbol="Add" ToolTipService.ToolTip="Add Playlist" Tapped="AddPlaylist_Tapped" />
+                    <Button Margin="10" Tapped="AddPlaylist_Tapped">
+                        <SymbolIcon Symbol="Add" ToolTipService.ToolTip="Add Playlist"  />
                     </Button>
                 </StackPanel>
                 <StackPanel x:Name="addEditPlaylist" Visibility="Collapsed">
@@ -46,7 +46,7 @@
                     <TextBox Margin="0,10,0,0" x:Name="playlistUrlTextBox" Text="{Binding Url, Mode=OneWay}" />
                     <TextBlock  Margin="0,10,0,0" Style="{ThemeResource CaptionTextBlockStyle}">URL to an IPTV playlist (m3u8 format) that
                         contains the channel defintions you want to view. <Hyperlink NavigateUri="https://github.com/tomhollander/IptvFtw/wiki/Playlist-sources">More information</Hyperlink></TextBlock>
-                    <Button Tapped="ApplyPlaylistUrl_Tapped" Margin="0,10,0,0">Load</Button>
+                    <Button Tapped="ApplyPlaylistUrl_Tapped" x:Name="loadPlaylistButton" Margin="0,10,0,0">Load</Button>
                     <TextBlock Margin="0,10,0,0" Foreground="Red" x:Name="playlistErrorTextBlock" Visibility="Collapsed" Text="Something really bad happened." TextWrapping="Wrap"/>
                     <TextBlock Margin="0,10,0,0" x:Name="playlistNameCaption">Playlist Name</TextBlock>
                     <TextBox Margin="0,10,0,0" x:Name="playlistName" Text="{Binding Name, Mode=OneWay}" />

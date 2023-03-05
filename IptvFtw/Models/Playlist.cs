@@ -8,9 +8,17 @@ using System.Threading.Tasks;
 
 namespace IptvFtw.Models
 {
-    public class Playlist : INotifyPropertyChanged
+    public class Playlist : INotifyPropertyChanged, ICloneable
     {
-        public string Name { get; set; }
+        private string _name;
+        public string Name
+        {
+            get { return _name; }
+            set { 
+                _name = value; 
+                RaisePropertyChanged(nameof(Name)); 
+            }
+        }
         public string Url { get; set; }
         public string EpgUrl { get; set; }
 
@@ -40,6 +48,22 @@ namespace IptvFtw.Models
             {
                 PropertyChanged(property, new PropertyChangedEventArgs(property));
             }
+        }
+
+        public object Clone()
+        {
+            var p = new Playlist()
+            {
+                Name = Name,
+                Url = Url,
+                EpgUrl = EpgUrl,
+                Channels = new ObservableCollection<Channel>(),
+            };
+            foreach (var channel in Channels)
+            {
+                p.Channels.Add((Channel)channel.Clone());
+            }
+            return p;
         }
     }
 }

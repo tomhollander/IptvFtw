@@ -6,7 +6,7 @@ using System.Threading.Tasks;
 
 namespace IptvFtw.Models
 {
-    public class Channel
+    public class Channel : ICloneable
     {
         public string Id { get; set; }
 
@@ -49,5 +49,21 @@ namespace IptvFtw.Models
 
         public string UserAgent { get; set; }
         public string Referer { get; set; }
+
+        public object Clone()
+        {
+            return new Channel
+            {
+                Id = Id,
+                DisplayName = DisplayName,
+                ChannelNumber = ChannelNumber,
+                Included = Included,
+                GuideId = GuideId,
+                IconUrl = IconUrl,
+                StreamUrl = StreamUrl,
+                UserAgent = UserAgent,
+                Referer = Referer,
+            };
+        }
     }
 }
