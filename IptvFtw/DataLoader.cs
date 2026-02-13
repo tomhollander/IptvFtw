@@ -37,7 +37,10 @@ namespace IptvFtw
                 if (line.StartsWith("#EXTINF:-1 "))
                 {
                     var lastComma = line.LastIndexOf(',');
-                    var urlLine = playlistLines[++i];
+                    string urlLine = null;
+                    while (!playlistLines[++i].StartsWith("http")) ;
+                    urlLine = playlistLines[i];
+
                     var splitUrlLine = urlLine.Split("|");
 
                     var channel = new Channel()
