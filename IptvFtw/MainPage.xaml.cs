@@ -35,6 +35,7 @@ namespace IptvFtw
 
         private MainModel _model = new MainModel();
         private DisplayRequest _dispRequest = new DisplayRequest();
+        private static readonly System.Threading.SemaphoreSlim _settingsFileLock = new System.Threading.SemaphoreSlim(1, 1);
 
         public MainPage()
         {
@@ -46,7 +47,7 @@ namespace IptvFtw
         protected async override void OnNavigatedTo(NavigationEventArgs e)
         {
             this.DataContext = _model;
-            RestoreSettings();
+            await RestoreSettings();
             await LoadData();
 
             try
@@ -64,6 +65,14 @@ namespace IptvFtw
         private async Task LoadChannelsForPlaylist(Playlist playlist)
         {
             await DataLoader.LoadChannelsFromTvIrlPlaylist(playlist);
+            if (playlist.SavedIncludedChannelIds != null)
+            {
+                foreach (var channel in playlist.Channels)
+                {
+                    channel.Included = playlist.SavedIncludedChannelIds.Contains(channel.Id);
+                }
+                playlist.RaisePropertyChanged(nameof(Playlist.IncludedChannels));
+            }
         }
         private async Task LoadData()
         {
@@ -84,7 +93,7 @@ namespace IptvFtw
                     playlistErrorTextBlock.Visibility = Visibility.Collapsed;
                     splitView.IsPaneOpen = false;
                     
-                    SaveSettings();
+                    await SaveSettings();
                     ShowControls();
                     await PlayChannel();
 
@@ -173,7 +182,7 @@ namespace IptvFtw
                          p.End >= DateTime.Now).FirstOrDefault();
 
                 await PlayChannel();
-                SaveSettings();
+                await SaveSettings();
             }
         }
 
@@ -377,13 +386,36 @@ namespace IptvFtw
             }
         }
 
-        private void RestoreSettings()
+        private async Task RestoreSettings()
         {
             var lastUrl = (string) ApplicationData.Current.LocalSettings.Values["PlaylistUrl"];
             _model.LastChannelId = (string)ApplicationData.Current.LocalSettings.Values["LastChannel"];
             _model.Playlists = new ObservableCollection<Playlist>();
             var playlistUrls = ((string)ApplicationData.Current.LocalSettings.Values["RecentPlaylistUrls"])?.Split("|").ToList();
             var playlistNames = ((string)ApplicationData.Current.LocalSettings.Values["PlaylistNames"])?.Split("|").ToList();
+
+            string includedChannelsRaw = null;
+            await _settingsFileLock.WaitAsync();
+            try
+            {
+                try
+                {
+                    var file = await ApplicationData.Current.LocalFolder.GetFileAsync("PlaylistIncludedChannels.dat");
+                    includedChannelsRaw = await FileIO.ReadTextAsync(file);
+                }
+                catch (FileNotFoundException)
+                {
+                    // Fallback for migration
+                    includedChannelsRaw = (string)ApplicationData.Current.LocalSettings.Values["PlaylistIncludedChannels"];
+                }
+            }
+            finally
+            {
+                _settingsFileLock.Release();
+            }
+
+            var playlistIncludedChannels = includedChannelsRaw?.Split("|").ToList();
+
             if (playlistNames == null)
             {
                 playlistNames = playlistUrls;
@@ -395,17 +427,63 @@ namespace IptvFtw
                     var playlist = new Playlist();
                     playlist.Url = playlistUrls[i];
                     playlist.Name = playlistNames[i];
+                    if (playlistIncludedChannels != null && i < playlistIncludedChannels.Count && !string.IsNullOrEmpty(playlistIncludedChannels[i]))
+                    {
+                        playlist.SavedIncludedChannelIds = playlistIncludedChannels[i].Split('~').ToList();
+                    }
                     _model.Playlists.Add(playlist);
                 }
             }
             _model.CurrentPlaylist = _model.Playlists.Where(p => p.Url == lastUrl).FirstOrDefault();
 
         }
-        private void SaveSettings()
+        private async Task SaveSettings()
         {
             ApplicationData.Current.LocalSettings.Values["LastChannel"] = _model.LastChannelId;
             ApplicationData.Current.LocalSettings.Values["PlaylistUrl"] = _model.CurrentPlaylist?.Url;
-            // ApplicationData.Current.LocalSettings.Values["RecentPlaylistUrls"] = String.Join("|", _model.RecentPlaylistUrls);
+
+            if (_model.Playlists != null)
+            {
+                // Join URLs and Names with pipe separator to match RestoreSettings logic
+                string playlistUrls = string.Join("|", _model.Playlists.Select(p => p.Url));
+                // Provide a fallback to Url if Name is null to ensure the lists stay aligned
+                string playlistNames = string.Join("|", _model.Playlists.Select(p => p.Name ?? p.Url));
+
+                // Save included channels mapping
+                var includedChannelsList = new List<string>();
+                foreach (var playlist in _model.Playlists)
+                {
+                    if (playlist.Channels != null)
+                    {
+                        // Update the saved list from current state
+                        playlist.SavedIncludedChannelIds = playlist.Channels.Where(c => c.Included).Select(c => c.Id).ToList();
+                    }
+                    
+                    if (playlist.SavedIncludedChannelIds != null)
+                    {
+                         includedChannelsList.Add(string.Join("~", playlist.SavedIncludedChannelIds));
+                    }
+                    else
+                    {
+                        includedChannelsList.Add("");
+                    }
+                }
+                string playlistIncludedChannels = string.Join("|", includedChannelsList);
+
+                ApplicationData.Current.LocalSettings.Values["RecentPlaylistUrls"] = playlistUrls;
+                ApplicationData.Current.LocalSettings.Values["PlaylistNames"] = playlistNames;
+                
+                await _settingsFileLock.WaitAsync();
+                try
+                {
+                    var file = await ApplicationData.Current.LocalFolder.CreateFileAsync("PlaylistIncludedChannels.dat", CreationCollisionOption.ReplaceExisting);
+                    await FileIO.WriteTextAsync(file, playlistIncludedChannels);
+                }
+                finally
+                {
+                    _settingsFileLock.Release();
+                }
+            }
         }
 
         private async void PlaylistsListView_SelectionChanged(object sender, SelectionChangedEventArgs e)
@@ -454,7 +532,9 @@ namespace IptvFtw
                 _model.SelectedChannel = _model.CurrentPlaylist.IncludedChannels.FirstOrDefault();
             }
             
+            
             await PlayChannel();
+            await SaveSettings();
 
             splitView.IsPaneOpen = false;
             listPlaylists.Visibility = Visibility.Visible;
@@ -497,6 +577,7 @@ namespace IptvFtw
                 await PlayChannel();
                 ShowControls();
             }
+            await SaveSettings();
         }
     }
 

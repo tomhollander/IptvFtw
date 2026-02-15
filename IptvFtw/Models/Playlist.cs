@@ -22,6 +22,8 @@ namespace IptvFtw.Models
         public string Url { get; set; }
         public string EpgUrl { get; set; }
 
+        public List<string> SavedIncludedChannelIds { get; set; }
+
         private ObservableCollection<Channel> _channels;
 
         public ObservableCollection<Channel> Channels
@@ -57,6 +59,7 @@ namespace IptvFtw.Models
                 Name = Name,
                 Url = Url,
                 EpgUrl = EpgUrl,
+                SavedIncludedChannelIds = SavedIncludedChannelIds,
                 Channels = new ObservableCollection<Channel>(),
             };
             foreach (var channel in Channels)
