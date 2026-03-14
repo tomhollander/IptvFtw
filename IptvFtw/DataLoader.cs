@@ -19,56 +19,62 @@ namespace IptvFtw
     {
         public static async Task LoadChannelsFromTvIrlPlaylist(Playlist playlist)
         {
-            var channels = new List<Channel>();
-            var client = new HttpClient();
-
-            var playlistContent = await client.GetStringAsync(playlist.Url);
-
-            var playlistLines = playlistContent.Split('\n');
-            int i = 0;
-            while (i < playlistLines.Length)
+            try
             {
-                if (playlistLines[i].StartsWith("#EXTM3U"))
+                var channels = new List<Channel>();
+                var client = new HttpClient();
+
+                var playlistContent = await client.GetStringAsync(playlist.Url);
+
+                var playlistLines = playlistContent.Split('\n');
+                int i = 0;
+                while (i < playlistLines.Length)
                 {
-                    playlist.EpgUrl = GetNamedMetadataAttribute(playlistLines[i], "x-tvg-url");
-                }
-
-                var line = playlistLines[i];
-                if (line.StartsWith("#EXTINF:-1 "))
-                {
-                    var lastComma = line.LastIndexOf(',');
-                    string urlLine = null;
-                    while (!playlistLines[++i].StartsWith("http")) ;
-                    urlLine = playlistLines[i];
-
-                    var splitUrlLine = urlLine.Split("|");
-
-                    var channel = new Channel()
+                    if (playlistLines[i].StartsWith("#EXTM3U"))
                     {
-                        Id = GetNamedMetadataAttribute(line, "channel-id") ?? GetNamedMetadataAttribute(line, "tvg-id"),
-                        DisplayName = line.Substring(lastComma + 1),
-                        GuideId = GetNamedMetadataAttribute(line, "tvg-id"),
-                        ChannelNumber = GetNamedMetadataAttribute(line, "tvg-chno"),
-                        IconUrl = GetNamedMetadataAttribute(line, "tvg-logo"),
-                        StreamUrl = splitUrlLine[0],
-                        UserAgent = splitUrlLine.Length > 1 ? GetNamedUrlAttribute(splitUrlLine[1], "user-agent") : null,
-                        Referer = splitUrlLine.Length > 1 ? GetNamedUrlAttribute(splitUrlLine[1], "referer") : null,
-                        Included = true,
-                    };
-
-                    // Only show a max of 250 channels in this app, as some playlists are really big.
-                    //if (!channel.DisplayName.EndsWith(" Alt") && channels.Count < 250) 
-                    {
-                        channels.Add(channel);
+                        playlist.EpgUrl = GetNamedMetadataAttribute(playlistLines[i], "x-tvg-url");
                     }
-                    
-                    
+
+                    var line = playlistLines[i];
+                    if (line.StartsWith("#EXTINF:-1 "))
+                    {
+                        var lastComma = line.LastIndexOf(',');
+                        string urlLine = null;
+                        while (!playlistLines[++i].StartsWith("http")) ;
+                        urlLine = playlistLines[i];
+
+                        var splitUrlLine = urlLine.Split("|");
+
+                        var channel = new Channel()
+                        {
+                            Id = GetNamedMetadataAttribute(line, "channel-id") ?? GetNamedMetadataAttribute(line, "tvg-id"),
+                            DisplayName = line.Substring(lastComma + 1),
+                            GuideId = GetNamedMetadataAttribute(line, "tvg-id"),
+                            ChannelNumber = GetNamedMetadataAttribute(line, "tvg-chno"),
+                            IconUrl = GetNamedMetadataAttribute(line, "tvg-logo"),
+                            StreamUrl = splitUrlLine[0],
+                            UserAgent = splitUrlLine.Length > 1 ? GetNamedUrlAttribute(splitUrlLine[1], "user-agent") : null,
+                            Referer = splitUrlLine.Length > 1 ? GetNamedUrlAttribute(splitUrlLine[1], "referer") : null,
+                            Included = true,
+                        };
+
+                        // Only show a max of 250 channels in this app, as some playlists are really big.
+                        //if (!channel.DisplayName.EndsWith(" Alt") && channels.Count < 250) 
+                        {
+                            channels.Add(channel);
+                        }
+
+
+                    }
+                    i++;
+
                 }
-                i++;
-
+                playlist.Channels = new System.Collections.ObjectModel.ObservableCollection<Channel>(channels.OrderBy(c => c.ChannelNumber ?? "zzz").ThenBy(c => c.DisplayName).ToList());
             }
-            playlist.Channels = new System.Collections.ObjectModel.ObservableCollection<Channel>(channels.OrderBy(c => c.ChannelNumber ?? "zzz").ThenBy(c => c.DisplayName).ToList());
-
+            catch
+            {
+                playlist.Channels = new System.Collections.ObjectModel.ObservableCollection<Channel>();
+            }
         }
 
         private static string GetNamedMetadataAttribute(string line, string key)

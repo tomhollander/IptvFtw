@@ -41,7 +41,6 @@ namespace IptvFtw
         {
             this.InitializeComponent();
             SetupTimers();
-
         }
 
         protected async override void OnNavigatedTo(NavigationEventArgs e)
@@ -49,6 +48,27 @@ namespace IptvFtw
             this.DataContext = _model;
             await RestoreSettings();
             await LoadData();
+
+            await Task.Delay(500); // Small delay to ensure UI is ready before trying to focus elements
+            if (_model.Playlists.Count == 0)
+            {
+                splitView.IsPaneOpen = true;
+                addEditPlaylist.Visibility = Visibility.Visible;
+                listPlaylists.Visibility = Visibility.Collapsed;
+                playlistUrlTextBox.Focus(FocusState.Programmatic);
+
+            }
+            else if (_model.SelectedChannel == null || _model.CurrentPlaylist == null)
+            {
+                splitView.IsPaneOpen = true;
+                listPlaylists.Visibility = Visibility.Visible;
+                addEditPlaylist.Visibility = Visibility.Collapsed;
+                playlistsListView.Focus(FocusState.Programmatic);
+            }
+            else
+            {
+                channelsListView.Focus(FocusState.Programmatic);
+            }
 
             try
             {
@@ -58,8 +78,7 @@ namespace IptvFtw
             {
             }
 
-            base.OnNavigatedTo(e);
-            channelsListView.Focus(FocusState.Programmatic);
+                
         }
 
         private async Task LoadChannelsForPlaylist(Playlist playlist)
@@ -78,7 +97,7 @@ namespace IptvFtw
         {
             if (_model.CurrentPlaylist == null)
             {
-                splitView.IsPaneOpen = true;
+                return;
             }
             else
             {
@@ -86,13 +105,13 @@ namespace IptvFtw
                 {
                     await LoadChannelsForPlaylist(_model.CurrentPlaylist);
                     _model.SelectedChannel = _model.CurrentPlaylist?.Channels.Where(c => c.Id == _model.LastChannelId).FirstOrDefault();
-                    if (_model.SelectedChannel == null )
+                    if (_model.SelectedChannel == null)
                     {
                         _model.SelectedChannel = _model.CurrentPlaylist?.Channels.First();
                     }
                     playlistErrorTextBlock.Visibility = Visibility.Collapsed;
                     splitView.IsPaneOpen = false;
-                    
+
                     await SaveSettings();
                     ShowControls();
                     await PlayChannel();
@@ -101,7 +120,7 @@ namespace IptvFtw
                     {
                         await DataLoader.LoadTvPrograms(_model);
                     }
-                    
+
 
                 }
                 catch (Exception ex)
@@ -113,25 +132,11 @@ namespace IptvFtw
             }
         }
 
-        private void SavePlaylist()
-        {
-            if (_model.Playlists == null)
-            {
-                _model.Playlists = new ObservableCollection<Playlist>();
-            }
-            // Remove it if it's there already
-            var thisPlaylist = _model.Playlists.Where(p => p.Url == "XX").FirstOrDefault();
-            if (thisPlaylist != null)
-            {
-                
-            }
-            _model.Playlists.Add(new Playlist());
 
-        }
 
         private Playlist unsavedPlaylist;
 
-        private async void ApplyPlaylistUrl_Tapped(object sender, TappedRoutedEventArgs e)
+        private async void ApplyPlaylistUrl_Click(object sender, RoutedEventArgs e)
         {
             unsavedPlaylist = new Playlist()
             {
@@ -150,14 +155,14 @@ namespace IptvFtw
                     playlistErrorTextBlock.Text = "No channels found. Is it a proper IPTV playlist?";
                     playlistErrorTextBlock.Visibility = Visibility.Visible;
                 }
-                
+
             }
             catch (Exception ex)
             {
                 playlistErrorTextBlock.Text = ex.Message;
                 playlistErrorTextBlock.Visibility = Visibility.Visible;
             }
-            
+
         }
 
         private void ToggleAddEditPlaylistControls(Visibility visibility)
@@ -218,12 +223,21 @@ namespace IptvFtw
 
         private void Page_KeyUp(object sender, KeyRoutedEventArgs e)
         {
-            if (FocusManager.GetFocusedElement() is TextBox)
+            // Make it easy to get out of the playlist edit mode with a gamepad
+            if (e.Key == VirtualKey.GamepadX && splitView.IsPaneOpen && (addEditPlaylist.Visibility == Visibility.Visible) && saveButton.IsEnabled)
+            {
+                saveButton_Click(saveButton, new RoutedEventArgs());
+            }
+            else if (e.Key == VirtualKey.GamepadB && splitView.IsPaneOpen && (addEditPlaylist.Visibility == Visibility.Visible))
+            {
+                cancelButton_Click(cancelButton, new RoutedEventArgs());
+            }
+            else if (FocusManager.GetFocusedElement() is TextBox || FocusManager.GetFocusedElement() is Button || FocusManager.GetFocusedElement() is CheckBox)
             {
                 return;
             }
             if (e.Key == Windows.System.VirtualKey.Space || e.Key == Windows.System.VirtualKey.GamepadX ||
-                e.Key == Windows.System.VirtualKey.GamepadMenu || e.Key == Windows.System.VirtualKey.X)
+                e.Key == Windows.System.VirtualKey.X && !splitView.IsPaneOpen)
             {
                 ShowControls();
             }
@@ -232,17 +246,31 @@ namespace IptvFtw
                 HideControls();
             }
             else if (e.Key == Windows.System.VirtualKey.Y || e.Key == Windows.System.VirtualKey.GamepadY ||
-                e.Key == Windows.System.VirtualKey.GamepadView)
+                e.Key == Windows.System.VirtualKey.GamepadView && !splitView.IsPaneOpen)
             {
                 mediaElement.TransportControls.Focus(FocusState.Programmatic);
             }
-            else if (e.Key == VirtualKey.Enter)
+            else if (e.Key == VirtualKey.Enter && !splitView.IsPaneOpen)
             {
                 ChangeChannelNumber();
             }
             else if (NumericKeys.ContainsKey(e.Key))
             {
                 ProcessChannelNumberInput(NumericKeys[e.Key]);
+            }
+            else if (e.Key == VirtualKey.GamepadMenu)
+            {
+                if (!splitView.IsPaneOpen)
+                {
+                    splitView.IsPaneOpen = true;
+                    addEditPlaylist.Visibility = Visibility.Collapsed;
+                    listPlaylists.Visibility = Visibility.Visible;
+                    topControls.Visibility = Visibility.Collapsed;
+                }
+                else
+                {
+                    splitView.IsPaneOpen = false;
+                }
             }
         }
 
@@ -348,6 +376,7 @@ namespace IptvFtw
         {
             if (_model.SelectedChannel?.StreamUri != null)
             {
+                mediaElement.AreTransportControlsEnabled = true;
                 await InitializeAdaptiveMediaSource(_model.SelectedChannel.StreamUri);
                 _channelBarTimer.Start();
             }
@@ -388,11 +417,20 @@ namespace IptvFtw
 
         private async Task RestoreSettings()
         {
-            var lastUrl = (string) ApplicationData.Current.LocalSettings.Values["PlaylistUrl"];
+            // await ApplicationData.Current.ClearAsync(); // For testing
+            var lastUrl = (string)ApplicationData.Current.LocalSettings.Values["PlaylistUrl"];
             _model.LastChannelId = (string)ApplicationData.Current.LocalSettings.Values["LastChannel"];
             _model.Playlists = new ObservableCollection<Playlist>();
-            var playlistUrls = ((string)ApplicationData.Current.LocalSettings.Values["RecentPlaylistUrls"])?.Split("|").ToList();
-            var playlistNames = ((string)ApplicationData.Current.LocalSettings.Values["PlaylistNames"])?.Split("|").ToList();
+            
+            var playlistUrlsString = (string)ApplicationData.Current.LocalSettings.Values["RecentPlaylistUrls"];
+            var playlistUrls = String.IsNullOrWhiteSpace(playlistUrlsString) ? null : playlistUrlsString.Split("|").ToList();
+            var playlistNamesString = (string)ApplicationData.Current.LocalSettings.Values["PlaylistNames"];
+            var playlistNames = String.IsNullOrWhiteSpace(playlistNamesString) ? null : playlistNamesString.Split("|").ToList();
+
+            if (playlistUrls == null && playlistNames == null)
+            {
+                LoadDefaultPlaylists(out playlistUrls, out playlistNames);
+            }
 
             string includedChannelsRaw = null;
             await _settingsFileLock.WaitAsync();
@@ -420,9 +458,10 @@ namespace IptvFtw
             {
                 playlistNames = playlistUrls;
             }
+
             if (playlistUrls != null)
             {
-                for (int i=0; i<playlistUrls.Count; i++)
+                for (int i = 0; i < playlistUrls.Count; i++)
                 {
                     var playlist = new Playlist();
                     playlist.Url = playlistUrls[i];
@@ -434,9 +473,51 @@ namespace IptvFtw
                     _model.Playlists.Add(playlist);
                 }
             }
-            _model.CurrentPlaylist = _model.Playlists.Where(p => p.Url == lastUrl).FirstOrDefault();
 
+            _model.CurrentPlaylist = _model.Playlists.Where(p => p.Url == lastUrl).FirstOrDefault();
         }
+
+        private void LoadDefaultPlaylists(out List<string> playlistUrls, out List<string> playlistNames)
+        {
+            playlistNames = new List<string>
+            {
+                "Australia",
+                "New Zealand",
+                "United Kingdom",
+                "Canada",
+                "France",
+                "Germany",
+                "Spain",
+                "United States",
+                "India",
+                "Japan",
+                "China",
+                "Animation",
+                "Comedy",
+                "Movies",
+                "News"
+            };
+
+            playlistUrls = new List<string>
+            {
+                "https://i.mjh.nz/au/Sydney/kodi-tv.m3u8",
+                "https://i.mjh.nz/nz/kodi-tv.m3u8",
+                "https://iptv-org.github.io/iptv/countries/uk.m3u",
+                "https://iptv-org.github.io/iptv/countries/ca.m3u",
+                "https://iptv-org.github.io/iptv/countries/fr.m3u",
+                "https://iptv-org.github.io/iptv/countries/de.m3u",
+                "https://iptv-org.github.io/iptv/countries/es.m3u",
+                "https://iptv-org.github.io/iptv/countries/us.m3u",
+                "https://iptv-org.github.io/iptv/countries/in.m3u",
+                "https://iptv-org.github.io/iptv/countries/jp.m3u",
+                "https://iptv-org.github.io/iptv/countries/cn.m3u",
+                "https://iptv-org.github.io/iptv/categories/animation.m3u",
+                "https://iptv-org.github.io/iptv/categories/comedy.m3u",
+                "https://iptv-org.github.io/iptv/categories/movies.m3u",
+                "https://iptv-org.github.io/iptv/categories/news.m3u"
+            };
+        }
+
         private async Task SaveSettings()
         {
             ApplicationData.Current.LocalSettings.Values["LastChannel"] = _model.LastChannelId;
@@ -458,10 +539,10 @@ namespace IptvFtw
                         // Update the saved list from current state
                         playlist.SavedIncludedChannelIds = playlist.Channels.Where(c => c.Included).Select(c => c.Id).ToList();
                     }
-                    
+
                     if (playlist.SavedIncludedChannelIds != null)
                     {
-                         includedChannelsList.Add(string.Join("~", playlist.SavedIncludedChannelIds));
+                        includedChannelsList.Add(string.Join("~", playlist.SavedIncludedChannelIds));
                     }
                     else
                     {
@@ -472,7 +553,7 @@ namespace IptvFtw
 
                 ApplicationData.Current.LocalSettings.Values["RecentPlaylistUrls"] = playlistUrls;
                 ApplicationData.Current.LocalSettings.Values["PlaylistNames"] = playlistNames;
-                
+
                 await _settingsFileLock.WaitAsync();
                 try
                 {
@@ -486,25 +567,8 @@ namespace IptvFtw
             }
         }
 
-        private async void PlaylistsListView_SelectionChanged(object sender, SelectionChangedEventArgs e)
-        {
-            _model.CurrentPlaylist = (Playlist) playlistsListView.SelectedItem;
-            if (_model.CurrentPlaylist == null)
-            {
-                return;
-            }
-            if (_model.CurrentPlaylist.Channels == null)
-            {
-                await LoadChannelsForPlaylist(_model.CurrentPlaylist);
-            }
-            _model.SelectedChannel = _model.CurrentPlaylist.IncludedChannels.FirstOrDefault();
-            await PlayChannel();
-            splitView.IsPaneOpen = false;
-            ShowControls();
 
-        }
-
-        private void AddPlaylist_Tapped(object sender, TappedRoutedEventArgs e)
+        private void AddPlaylist_Click(object sender, RoutedEventArgs e)
         {
             playlistUrlTextBox.Text = "";
             playlistUrlTextBox.IsEnabled = true;
@@ -512,11 +576,16 @@ namespace IptvFtw
             ToggleAddEditPlaylistControls(Visibility.Collapsed);
             loadPlaylistButton.Visibility = Visibility.Visible;
             addEditPlaylist.Visibility = Visibility.Visible;
+            playlistUrlTextBox.Focus(FocusState.Programmatic);
         }
 
-        private async void saveButton_Tapped(object sender, TappedRoutedEventArgs e)
+        private async void saveButton_Click(object sender, RoutedEventArgs e)
         {
-            unsavedPlaylist.Name = String.IsNullOrEmpty(playlistName.Text) ?  unsavedPlaylist.Url : playlistName.Text;
+            splitView.IsPaneOpen = false;
+            listPlaylists.Visibility = Visibility.Visible;
+            addEditPlaylist.Visibility = Visibility.Collapsed;
+
+            unsavedPlaylist.Name = String.IsNullOrEmpty(playlistName.Text) ? unsavedPlaylist.Url : playlistName.Text;
             if (loadPlaylistButton.Visibility == Visibility.Collapsed)
             {
                 // Edit mode
@@ -531,32 +600,30 @@ namespace IptvFtw
                 _model.CurrentPlaylist = unsavedPlaylist;
                 _model.SelectedChannel = _model.CurrentPlaylist.IncludedChannels.FirstOrDefault();
             }
-            
-            
+
+
             await PlayChannel();
             await SaveSettings();
 
-            splitView.IsPaneOpen = false;
-            listPlaylists.Visibility = Visibility.Visible;
-            addEditPlaylist.Visibility = Visibility.Collapsed;
+
             ShowControls();
         }
 
-        private void cancelButton_Tapped(object sender, TappedRoutedEventArgs e)
+        private void cancelButton_Click(object sender, RoutedEventArgs e)
         {
             splitView.IsPaneOpen = false;
             listPlaylists.Visibility = Visibility.Visible;
             addEditPlaylist.Visibility = Visibility.Collapsed;
         }
 
-        private async void editPlaylistButton_Tapped(object sender, TappedRoutedEventArgs e)
+        private async void editPlaylistButton_Click(object sender, RoutedEventArgs e)
         {
             var playlist = ((Button)sender).DataContext as Playlist;
             if (playlist.Channels == null)
             {
                 await LoadChannelsForPlaylist(playlist);
             }
-            unsavedPlaylist = (Playlist) playlist.Clone();
+            unsavedPlaylist = (Playlist)playlist.Clone();
             playlistUrlTextBox.Text = unsavedPlaylist.Url;
             playlistUrlTextBox.IsEnabled = false;
             playlistName.Text = unsavedPlaylist.Name;
@@ -565,9 +632,10 @@ namespace IptvFtw
             listPlaylists.Visibility = Visibility.Collapsed;
             ToggleAddEditPlaylistControls(Visibility.Visible);
             addEditPlaylist.Visibility = Visibility.Visible;
+            playlistName.Focus(FocusState.Programmatic);
         }
 
-        private async void deletePlaylistButton_Tapped(object sender, TappedRoutedEventArgs e)
+        private async void deletePlaylistButton_Click(object sender, RoutedEventArgs e)
         {
             var playlist = ((Button)sender).DataContext as Playlist;
             _model.Playlists.Remove(playlist);
@@ -578,6 +646,73 @@ namespace IptvFtw
                 ShowControls();
             }
             await SaveSettings();
+        }
+
+        private async void playlistsListView_SelectionChanged(object sender, SelectionChangedEventArgs e)
+        {
+            var playlist = (Playlist)playlistsListView.SelectedItem;
+            if (playlist == null)
+            {
+                return;
+            }
+
+            // Focus the playlistButton inside the selected container
+            if (playlistsListView.ContainerFromItem(playlist) is ListViewItem container)
+            {
+                var button = FindChildByName<Button>(container, "playlistButton");
+                button?.Focus(FocusState.Programmatic);
+            }
+        }
+
+        private static T FindChildByName<T>(DependencyObject parent, string name) where T : FrameworkElement
+        {
+            int count = VisualTreeHelper.GetChildrenCount(parent);
+            for (int i = 0; i < count; i++)
+            {
+                var child = VisualTreeHelper.GetChild(parent, i);
+                if (child is T element && element.Name == name)
+                    return element;
+                var result = FindChildByName<T>(child, name);
+                if (result != null)
+                    return result;
+            }
+            return null;
+        }
+
+        private async void playlistButton_Click(object sender, RoutedEventArgs e)
+        {
+            var playlist = (Playlist)((Button)sender).DataContext;
+            playlistsListView.SelectedItem = playlist;
+            await SelectPlaylist(playlist);
+        }
+
+
+
+        private async Task SelectPlaylist(Playlist playlist)
+        {
+            _model.CurrentPlaylist = playlist;
+            if (_model.CurrentPlaylist == null)
+            {
+                return;
+            }
+            if (_model.CurrentPlaylist.Channels == null)
+            {
+                await LoadChannelsForPlaylist(_model.CurrentPlaylist);
+            }
+            _model.SelectedChannel = _model.CurrentPlaylist.IncludedChannels.FirstOrDefault();
+            await PlayChannel();
+            splitView.IsPaneOpen = false;
+            ShowControls();
+        }
+
+        private void includeChannelsListView_SelectionChanged(object sender, SelectionChangedEventArgs e)
+        {
+            // Focus the checkbox inside the selected container
+            if (includeChannelsListView.ContainerFromItem(includeChannelsListView.SelectedItem) is ListViewItem container)
+            {
+                var checkBox = FindChildByName<CheckBox>(container, "includeChannelCheckBox");
+                checkBox?.Focus(FocusState.Programmatic);
+            }
         }
     }
 
