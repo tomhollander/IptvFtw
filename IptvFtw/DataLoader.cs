@@ -12,6 +12,8 @@ using System.Threading.Tasks;
 using System.Xml.Linq;
 using Windows.UI.Xaml.Shapes;
 using System.Globalization;
+using System.Text.Json.Nodes;
+using Windows.Gaming.Input;
 
 namespace IptvFtw
 {
@@ -192,7 +194,84 @@ namespace IptvFtw
             }
             return DateTime.ParseExact(dateString, "yyyyMMddHHmmss zzz", DateTimeFormatInfo.CurrentInfo, DateTimeStyles.AssumeLocal);
         }
-    }
 
+        public static async Task<List<DirectoryItem>> LoadIptvOrgFeed(string feed)
+        {
+            try
+            {
+                var client = new HttpClient();
+                var feedContent = await client.GetStringAsync($"https://iptv-org.github.io/api/{feed}.json");
+                var feedJson = JsonNode.Parse(feedContent).AsArray();
+                var items = new List<DirectoryItem>();
+                foreach (var category in feedJson)
+                {
+                    if (feed == "categories")
+                    {
+                        if (category["id"].ToString() == "xxx")
+                        {
+                            continue;
+                        }
+                        items.Add(new DirectoryItem()
+                        {
+                            Id = category["id"].ToString().ToLowerInvariant(),
+                            Name = category["name"].ToString(),
+                        });
+                    }
+                    else if (feed == "countries")
+                    {
+                        items.Add(new DirectoryItem()
+                        {
+                            Id = category["code"].ToString().ToLowerInvariant(),
+                            Name = category["name"].ToString(),
+                        });
+                    }
+                    else if (feed == "languages")
+                    {
+                        string[] languagesWithFeeds = { "ach", "adh", "aar", "afr", "aho", "sqi", "gsw", "asp", "alz", "amh", "ara", "hye", "asm", "aii", "ayb", "aym", "aze",
+                            "bba", "bam", "bak", "eus", "bel", "ben", "bho", "bib", "bos", "box", "bul", "mya", "cat", "ceb", "tzm", "ckb", "cnu", "hne", "cgg", "zho",
+                            "hrv", "ces", "dan", "prd", "div", "luo", "zza", "nld", "dyu", "arz", "eng", "est", "ewe", "fao", "far", "fil", "fin", "fon", "fra", "ful",
+                            "gla", "glg", "lug", "gej", "kat", "deu", "kik", "gom", "gux", "ell", "gcf", "guj", "guw", "hat", "bgc", "hau", "heb", "hin", "hmn", "hun",
+                            "isl", "ind", "iku", "gle", "its", "icr", "ita", "jpn", "jav", "kbp", "kab", "kan", "pam", "kaz", "khm", "kmz", "kin", "kir", "mkw", "bbo",
+                            "kon", "kok", "kor", "kdi", "kur", "lah", "laj", "lao", "lat", "lav", "ltz", "lin", "lit", "lob", "lua", "lus", "lee", "mkd", "mai", "msa",
+                            "mal", "mlt", "cmn", "mnk", "mri", "mar", "rkm", "stj", "sym", "nan", "mon", "xms", "mos", "nep", "dgi", "nor", "nyn", "nyo", "ori", "pan",
+                            "pap", "pus", "fas", "pol", "por", "fuc", "que", "ron", "rom", "rus", "acf", "smo", "sat", "srp", "snd", "sin", "slk", "slv", "som", "sfs",
+                            "nbl", "sbd", "spa", "arb", "sun", "swa", "ssw", "swe", "shy", "shi", "tgl", "tah", "tgk", "tmh", "taq", "tam", "rif", "tat", "tel", "tha", 
+                            "bod", "tig", "tir", "ttj", "tso", "mzb", "tur", "tuk", "uig", "ukr", "urd", "uzb", "ven", "vie", "cym", "fry", "wol", "xho", "sah", "yor",
+                            "yua", "yue", "dje", "zul" };
+
+                        if (languagesWithFeeds.Contains(category["code"].ToString()))
+                        {
+                            items.Add(new DirectoryItem()
+                            {
+                                Id = category["code"].ToString().ToLowerInvariant(),
+                                Name = category["name"].ToString(),
+                            });
+                        }
+    
+                    }
+                    else if (feed == "subdivisions")
+                    {
+                        string[] countriesWithSubdivisionFeeds = { "AR", "AU", "AT", "BE", "BO", "BR", "CA", "CL", "CO", "CR", "DO", "EC", "FI", "FR", "GE", "DE", 
+                            "GR", "GT", "IN", "ID", "IT", "JP", "MX", "PK", "PY", "PR", "PH", "CG", "RO", "RU", "KR", "ES", "UA", "UK", "US", "VE"};
+                        if (countriesWithSubdivisionFeeds.Contains(category["country"].ToString()))
+                        {
+                            items.Add(new DirectoryItem()
+                            {
+                                Id = category["code"].ToString().ToLowerInvariant(),
+                                Name = category["name"].ToString(),
+                                ParentId = category["country"].ToString().ToLowerInvariant(),
+                            });
+                        }
+                    }
+
+                }
+                return items.OrderBy(i => i.Name).ToList();
+            }
+            catch
+            {
+                return new List<DirectoryItem>();
+            }
+        }
+    }
 
 }

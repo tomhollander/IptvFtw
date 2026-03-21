@@ -135,6 +135,7 @@
       <DependentUpon>MainPage.xaml</DependentUpon>
     </Compile>
     <Compile Include="Models\Channel.cs" />
+    <Compile Include="Models\DirectoryItem.cs" />
     <Compile Include="Models\MainModel.cs" />
     <Compile Include="Models\Playlist.cs" />
     <Compile Include="Models\TvProgram.cs" />
@@ -173,6 +174,9 @@
   <ItemGroup>
     <PackageReference Include="Microsoft.NETCore.UniversalWindowsPlatform">
       <Version>6.2.14</Version>
+    </PackageReference>
+    <PackageReference Include="System.Text.Json">
+      <Version>10.0.5</Version>
     </PackageReference>
   </ItemGroup>
   <PropertyGroup Condition=" '$(VisualStudioVersion)' == '' or '$(VisualStudioVersion)' &lt; '14.0' ">

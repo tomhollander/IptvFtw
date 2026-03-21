@@ -2,6 +2,7 @@
 using System;
 using System.Collections.Generic;
 using System.Collections.ObjectModel;
+using System.ComponentModel;
 using System.Diagnostics;
 using System.IO;
 using System.Linq;
@@ -37,6 +38,12 @@ namespace IptvFtw
         private DisplayRequest _dispRequest = new DisplayRequest();
         private static readonly System.Threading.SemaphoreSlim _settingsFileLock = new System.Threading.SemaphoreSlim(1, 1);
 
+        private List<DirectoryItem> ipTvOrgCategories;
+        private List<DirectoryItem> ipTvOrgCountries;
+        private List<DirectoryItem> ipTvOrgSubdivisions;
+        private List<DirectoryItem> ipTvOrgLangauges;
+        private List<DirectoryItem> MjhNzPlaylists;
+
         public MainPage()
         {
             this.InitializeComponent();
@@ -48,6 +55,7 @@ namespace IptvFtw
             this.DataContext = _model;
             await RestoreSettings();
             await LoadData();
+            await LoadDirectoryItems();
 
             await Task.Delay(500); // Small delay to ensure UI is ready before trying to focus elements
             if (_model.Playlists.Count == 0)
@@ -79,6 +87,39 @@ namespace IptvFtw
             }
 
                 
+        }
+
+        private async Task LoadDirectoryItems()
+        {
+            var tasks = new List<Task<List<DirectoryItem>>>
+            {
+                DataLoader.LoadIptvOrgFeed("categories"),
+                DataLoader.LoadIptvOrgFeed("countries"),
+                DataLoader.LoadIptvOrgFeed("subdivisions"),
+                DataLoader.LoadIptvOrgFeed("languages"),
+            };
+            await Task.WhenAll(tasks);
+            
+            ipTvOrgCategories = tasks[0].Result;
+            ipTvOrgCountries = tasks[1].Result;
+            ipTvOrgSubdivisions = tasks[2].Result;
+            ipTvOrgLangauges = tasks[3].Result;
+
+            MjhNzPlaylists = new List<DirectoryItem>
+            {
+                new DirectoryItem { Id = "https://i.mjh.nz/au/Adelaide/kodi-tv.m3u8", Name = "AU - Adelaide" },
+                new DirectoryItem { Id = "https://i.mjh.nz/au/Brisbane/kodi-tv.m3u8", Name = "AU - Brisbane" },
+                new DirectoryItem { Id = "https://i.mjh.nz/au/Canberra/kodi-tv.m3u8", Name = "AU - Canberra" },
+                new DirectoryItem { Id = "https://i.mjh.nz/au/Darwin/kodi-tv.m3u8", Name = "AU - Darwin" },
+                new DirectoryItem { Id = "https://i.mjh.nz/au/Hobart/kodi-tv.m3u8", Name = "AU - Hobart" },
+                new DirectoryItem { Id = "https://i.mjh.nz/au/Melbourne/kodi-tv.m3u8", Name = "AU - Melbourne" },
+                new DirectoryItem { Id = "https://i.mjh.nz/au/Perth/kodi-tv.m3u8", Name = "AU - Perth" },
+                new DirectoryItem { Id = "https://i.mjh.nz/au/Sydney/kodi-tv.m3u8", Name = "AU - Sydney" },
+                new DirectoryItem { Id = "https://i.mjh.nz/nz/kodi-tv.m3u8", Name = "New Zealand" }
+            };
+
+            _model.PrimaryDirectoryItems = ipTvOrgCategories;
+            playlistSourceCombo.IsEnabled = true;
         }
 
         private async Task LoadChannelsForPlaylist(Playlist playlist)
@@ -138,40 +179,43 @@ namespace IptvFtw
 
         private async void ApplyPlaylistUrl_Click(object sender, RoutedEventArgs e)
         {
-            unsavedPlaylist = new Playlist()
-            {
-                Url = playlistUrlTextBox.Text
-            };
-            try
-            {
-                playlistErrorTextBlock.Visibility = Visibility.Collapsed;
-                await DataLoader.LoadChannelsFromTvIrlPlaylist(unsavedPlaylist);
-                if (unsavedPlaylist.Channels.Count > 0) {
-                    ToggleAddEditPlaylistControls(Visibility.Visible);
-                    includeChannelsListView.ItemsSource = unsavedPlaylist.Channels;
-                }
-                else
-                {
-                    playlistErrorTextBlock.Text = "No channels found. Is it a proper IPTV playlist?";
-                    playlistErrorTextBlock.Visibility = Visibility.Visible;
-                }
-
-            }
-            catch (Exception ex)
-            {
-                playlistErrorTextBlock.Text = ex.Message;
-                playlistErrorTextBlock.Visibility = Visibility.Visible;
-            }
-
+            playlistSourceCombo.SelectedIndex = -1; // Reset the playlist source dropdown to avoid confusion about where the playlist came from
+            await ApplyPlaylist();
         }
 
-        private void ToggleAddEditPlaylistControls(Visibility visibility)
+        private void SetAddEditPanelMode(bool? isAddMode, bool isPlayListLoaded)
         {
-            playlistNameCaption.Visibility = visibility;
-            playlistName.Visibility = visibility;
-            includeChannelsCaption.Visibility = visibility;
-            includeChannelsListView.Visibility = visibility;
-            saveButton.IsEnabled = visibility == Visibility.Visible;
+            if (isAddMode == true)
+            {
+                addEditHeading.Text = "Add Playlist";
+                addPlaylistRadioButtons.Visibility = Visibility.Visible;
+                addFromDirectoryOptions.Visibility = directoryRadioButton.IsChecked.Value ? Visibility.Visible : Visibility.Collapsed;
+                addFromUrlOptions.Visibility = urlRadioButton.IsChecked.Value ? Visibility.Visible : Visibility.Collapsed;
+            }
+            else if (isAddMode == false)
+            {
+                addEditHeading.Text = "Edit Playlist";
+                addPlaylistRadioButtons.Visibility = Visibility.Collapsed;
+                addFromDirectoryOptions.Visibility = Visibility.Collapsed;
+            }
+            // Leave it alone if it's null
+            
+            if (isPlayListLoaded)
+            {
+                playlistNameCaption.Visibility = Visibility.Visible;
+                playlistName.Visibility = Visibility.Visible;
+                includeChannelsCaption.Visibility = Visibility.Visible;
+                includeChannelsListView.Visibility = Visibility.Visible;
+                saveButton.IsEnabled = true;
+            }
+            else
+            {
+                playlistNameCaption.Visibility = Visibility.Collapsed;
+                playlistName.Visibility = Visibility.Collapsed;
+                includeChannelsCaption.Visibility = Visibility.Collapsed;
+                includeChannelsListView.Visibility = Visibility.Collapsed;
+                saveButton.IsEnabled = false;
+            }
         }
 
         private async void ChannelsListView_SelectionChanged(object sender, SelectionChangedEventArgs e)
@@ -220,6 +264,7 @@ namespace IptvFtw
             { VirtualKey.NumberPad8, '8' },
             { VirtualKey.NumberPad9, '9' }
        };
+
 
         private void Page_KeyUp(object sender, KeyRoutedEventArgs e)
         {
@@ -427,11 +472,6 @@ namespace IptvFtw
             var playlistNamesString = (string)ApplicationData.Current.LocalSettings.Values["PlaylistNames"];
             var playlistNames = String.IsNullOrWhiteSpace(playlistNamesString) ? null : playlistNamesString.Split("|").ToList();
 
-            if (playlistUrls == null && playlistNames == null)
-            {
-                LoadDefaultPlaylists(out playlistUrls, out playlistNames);
-            }
-
             string includedChannelsRaw = null;
             await _settingsFileLock.WaitAsync();
             try
@@ -477,46 +517,7 @@ namespace IptvFtw
             _model.CurrentPlaylist = _model.Playlists.Where(p => p.Url == lastUrl).FirstOrDefault();
         }
 
-        private void LoadDefaultPlaylists(out List<string> playlistUrls, out List<string> playlistNames)
-        {
-            playlistNames = new List<string>
-            {
-                "Australia",
-                "New Zealand",
-                "United Kingdom",
-                "Canada",
-                "France",
-                "Germany",
-                "Spain",
-                "United States",
-                "India",
-                "Japan",
-                "China",
-                "Animation",
-                "Comedy",
-                "Movies",
-                "News"
-            };
-
-            playlistUrls = new List<string>
-            {
-                "https://i.mjh.nz/au/Sydney/kodi-tv.m3u8",
-                "https://i.mjh.nz/nz/kodi-tv.m3u8",
-                "https://iptv-org.github.io/iptv/countries/uk.m3u",
-                "https://iptv-org.github.io/iptv/countries/ca.m3u",
-                "https://iptv-org.github.io/iptv/countries/fr.m3u",
-                "https://iptv-org.github.io/iptv/countries/de.m3u",
-                "https://iptv-org.github.io/iptv/countries/es.m3u",
-                "https://iptv-org.github.io/iptv/countries/us.m3u",
-                "https://iptv-org.github.io/iptv/countries/in.m3u",
-                "https://iptv-org.github.io/iptv/countries/jp.m3u",
-                "https://iptv-org.github.io/iptv/countries/cn.m3u",
-                "https://iptv-org.github.io/iptv/categories/animation.m3u",
-                "https://iptv-org.github.io/iptv/categories/comedy.m3u",
-                "https://iptv-org.github.io/iptv/categories/movies.m3u",
-                "https://iptv-org.github.io/iptv/categories/news.m3u"
-            };
-        }
+        
 
         private async Task SaveSettings()
         {
@@ -573,10 +574,14 @@ namespace IptvFtw
             playlistUrlTextBox.Text = "";
             playlistUrlTextBox.IsEnabled = true;
             listPlaylists.Visibility = Visibility.Collapsed;
-            ToggleAddEditPlaylistControls(Visibility.Collapsed);
+            SetAddEditPanelMode(true, false);
             loadPlaylistButton.Visibility = Visibility.Visible;
             addEditPlaylist.Visibility = Visibility.Visible;
-            playlistUrlTextBox.Focus(FocusState.Programmatic);
+            directoryRadioButton.IsChecked = true;
+            directoryRadioButton.Focus(FocusState.Programmatic);
+            playlistsPrimaryCombo.SelectedIndex = -1;
+            addFromDirectoryOptions.Visibility = Visibility.Visible;
+            addFromUrlOptions.Visibility = Visibility.Collapsed;
         }
 
         private async void saveButton_Click(object sender, RoutedEventArgs e)
@@ -586,6 +591,7 @@ namespace IptvFtw
             addEditPlaylist.Visibility = Visibility.Collapsed;
 
             unsavedPlaylist.Name = String.IsNullOrEmpty(playlistName.Text) ? unsavedPlaylist.Url : playlistName.Text;
+
             if (loadPlaylistButton.Visibility == Visibility.Collapsed)
             {
                 // Edit mode
@@ -630,7 +636,7 @@ namespace IptvFtw
             loadPlaylistButton.Visibility = Visibility.Collapsed;
             includeChannelsListView.ItemsSource = unsavedPlaylist.Channels;
             listPlaylists.Visibility = Visibility.Collapsed;
-            ToggleAddEditPlaylistControls(Visibility.Visible);
+            SetAddEditPanelMode(false, true);
             addEditPlaylist.Visibility = Visibility.Visible;
             playlistName.Focus(FocusState.Programmatic);
         }
@@ -712,6 +718,170 @@ namespace IptvFtw
             {
                 var checkBox = FindChildByName<CheckBox>(container, "includeChannelCheckBox");
                 checkBox?.Focus(FocusState.Programmatic);
+            }
+        }
+
+        private void directoryRadioButton_Click(object sender, RoutedEventArgs e)
+        {
+            addFromDirectoryOptions.Visibility = Visibility.Visible;
+            addFromUrlOptions.Visibility = Visibility.Collapsed;
+        }
+
+        private void urlRadioButton_Click(object sender, RoutedEventArgs e)
+        {
+            addFromDirectoryOptions.Visibility = Visibility.Collapsed;
+            addFromUrlOptions.Visibility = Visibility.Visible;
+        }
+
+        private void playlistSourceCombo_SelectionChanged(object sender, SelectionChangedEventArgs e)
+        {
+            if (playlistsPrimaryComboLabel is null) // Can happen during initialization before XAML components are loaded
+            {
+                return;
+            }
+            if (playlistSourceCombo.SelectedIndex == 0) // iptv-org Categories
+            {
+                playlistsPrimaryComboLabel.Text = "Category";
+                playlistsSecondaryComboLabel.Visibility = Visibility.Collapsed;
+                playlistsSecondaryCombo.Visibility = Visibility.Collapsed;
+                _model.PrimaryDirectoryItems = ipTvOrgCategories;
+            }
+            else if (playlistSourceCombo.SelectedIndex == 1) // iptv-org Countries
+            {
+                playlistsPrimaryComboLabel.Text = "Country";
+                playlistsSecondaryComboLabel.Visibility = Visibility.Visible;
+                playlistsSecondaryCombo.Visibility = Visibility.Visible;
+                _model.PrimaryDirectoryItems = ipTvOrgCountries;
+            }
+            if (playlistSourceCombo.SelectedIndex == 2) // iptv-org Languages
+            {
+                playlistsPrimaryComboLabel.Text = "Language";
+                playlistsSecondaryComboLabel.Visibility = Visibility.Collapsed;
+                playlistsSecondaryCombo.Visibility = Visibility.Collapsed;
+                _model.PrimaryDirectoryItems = ipTvOrgLangauges;
+            }
+            else if (playlistSourceCombo.SelectedIndex == 3) // Mjh
+            {
+                playlistsPrimaryComboLabel.Text = "Playlist";
+                playlistsSecondaryComboLabel.Visibility = Visibility.Collapsed;
+                playlistsSecondaryCombo.Visibility = Visibility.Collapsed;
+                _model.PrimaryDirectoryItems = MjhNzPlaylists;
+            }
+            SetAddEditPanelMode(true, false);
+        }
+
+        private async void playlistsPrimaryCombo_SelectionChanged(object sender, SelectionChangedEventArgs e)
+        {
+            if (playlistsPrimaryCombo.SelectedItem is DirectoryItem selectedItem)
+            {
+                if (playlistSourceCombo.SelectedIndex == 1) // iptv-org Countries
+                {
+                    var secondaryItems = new List<DirectoryItem>();
+                    secondaryItems.Add(new DirectoryItem { Id = selectedItem.Id, Name = "All" });
+                    secondaryItems.AddRange(ipTvOrgSubdivisions.Where(s => s.ParentId == selectedItem.Id).ToList());
+                    _model.SecondaryDirectoryItems = secondaryItems;
+                    playlistsSecondaryCombo.SelectedIndex = 0;
+                }
+                else
+                {
+                    _model.SecondaryDirectoryItems = null;
+                    await ApplyPlaylist();
+                }
+            }
+        }
+
+        private async Task ApplyPlaylist()
+        {
+            switch (playlistSourceCombo.SelectedIndex)
+            {
+                case 0: // iptv-org Categories
+                    unsavedPlaylist = new Playlist()
+                    {
+                        Name = ((DirectoryItem)playlistsPrimaryCombo.SelectedItem).Name,
+                        Url = $"https://iptv-org.github.io/iptv/categories/{((DirectoryItem)playlistsPrimaryCombo.SelectedItem).Id}.m3u"
+                    };
+                    break;
+                case 1: // iptv-org Countries
+                    if (playlistsSecondaryCombo.SelectedItem is DirectoryItem subdivision)
+                    {
+                        if (playlistsSecondaryCombo.SelectedIndex == 0) // All
+                        {
+                            unsavedPlaylist = new Playlist()
+                            {
+                                Name = ((DirectoryItem)playlistsPrimaryCombo.SelectedItem).Name,
+                                Url = $"https://iptv-org.github.io/iptv/countries/{subdivision.Id}.m3u"
+                            };
+                        }
+                        else
+                        {
+                            unsavedPlaylist = new Playlist()
+                            {
+                                Name = subdivision.Name,
+                                Url = $"https://iptv-org.github.io/iptv/subdivisions/{subdivision.Id}.m3u"
+                            };
+                        }
+                    }
+                    else
+                    {
+                        unsavedPlaylist = new Playlist()
+                        {
+                            Name = ((DirectoryItem)playlistsPrimaryCombo.SelectedItem).Name,
+                            Url = $"https://iptv-org.github.io/iptv/countries/{((DirectoryItem)playlistsPrimaryCombo.SelectedItem).Id}.m3u"
+                        };
+                    }
+                    break;
+                case 2: // iptv-org Languages
+                    unsavedPlaylist = new Playlist()
+                    {
+                        Name = ((DirectoryItem)playlistsPrimaryCombo.SelectedItem).Name,
+                        Url = $"https://iptv-org.github.io/iptv/languages/{((DirectoryItem)playlistsPrimaryCombo.SelectedItem).Id}.m3u"
+                    };
+                    break;
+                case 3: // Mjh
+                    unsavedPlaylist = new Playlist()
+                    {
+                        Name = ((DirectoryItem)playlistsPrimaryCombo.SelectedItem).Name,
+                        Url = ((DirectoryItem)playlistsPrimaryCombo.SelectedItem).Id
+                    };
+                    break;
+                default:
+                    unsavedPlaylist = new Playlist()
+                    {
+                        Name = playlistUrlTextBox.Text,
+                        Url = playlistUrlTextBox.Text
+                    };
+                    break;
+            }
+            playlistName.Text = unsavedPlaylist.Name;
+            try
+            {
+                playlistErrorTextBlock.Visibility = Visibility.Collapsed;
+                await DataLoader.LoadChannelsFromTvIrlPlaylist(unsavedPlaylist);
+                if (unsavedPlaylist.Channels?.Count > 0)
+                {
+                    SetAddEditPanelMode(null, true);
+                    includeChannelsListView.ItemsSource = unsavedPlaylist.Channels;
+                }
+                else
+                {
+                    playlistErrorTextBlock.Text = "No channels found. Is it a proper IPTV playlist?";
+                    includeChannelsListView.ItemsSource = new ObservableCollection<Channel>();
+                    playlistErrorTextBlock.Visibility = Visibility.Visible;
+                }
+
+            }
+            catch (Exception ex)
+            {
+                playlistErrorTextBlock.Text = ex.Message;
+                playlistErrorTextBlock.Visibility = Visibility.Visible;
+            }
+        }
+
+        private async void playlistsSecondaryCombo_SelectionChanged(object sender, SelectionChangedEventArgs e)
+        {
+            if (playlistsSecondaryCombo.SelectedIndex >= 0)
+            {
+                await ApplyPlaylist();
             }
         }
     }

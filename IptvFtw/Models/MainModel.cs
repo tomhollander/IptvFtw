@@ -79,6 +79,27 @@ namespace IptvFtw.Models
             }
         }
 
+        private List<DirectoryItem> primaryDirectoryItems;
+        private List<DirectoryItem> secondaryDirectoryItems;
+        public List<DirectoryItem> PrimaryDirectoryItems
+        {
+            get { return primaryDirectoryItems; }
+            set
+            {
+                primaryDirectoryItems = value;
+                RaisePropertyChanged(nameof(PrimaryDirectoryItems));
+            }
+        }
+        public List<DirectoryItem> SecondaryDirectoryItems
+        {
+            get { return secondaryDirectoryItems; }
+            set
+            {
+                secondaryDirectoryItems = value;
+                RaisePropertyChanged(nameof(SecondaryDirectoryItems));
+            }
+        }
+
         public event PropertyChangedEventHandler PropertyChanged;
 
         public void RaisePropertyChanged(string property)
