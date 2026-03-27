@@ -7,6 +7,7 @@ using System.Diagnostics;
 using System.IO;
 using System.Linq;
 using System.Runtime.InteropServices.WindowsRuntime;
+using System.Text.RegularExpressions;
 using System.Threading.Tasks;
 using Windows.Foundation;
 using Windows.Foundation.Collections;
@@ -133,6 +134,10 @@ namespace IptvFtw
                 }
                 playlist.RaisePropertyChanged(nameof(Playlist.IncludedChannels));
             }
+            if (playlist.EpgUrl != null)
+            {
+                await DataLoader.LoadTvPrograms(_model);
+            }
         }
         private async Task LoadData()
         {
@@ -156,11 +161,6 @@ namespace IptvFtw
                     await SaveSettings();
                     ShowControls();
                     await PlayChannel();
-
-                    if (_model.EpgUrl != null)
-                    {
-                        await DataLoader.LoadTvPrograms(_model);
-                    }
 
 
                 }
@@ -206,6 +206,7 @@ namespace IptvFtw
                 playlistName.Visibility = Visibility.Visible;
                 includeChannelsCaption.Visibility = Visibility.Visible;
                 includeChannelsListView.Visibility = Visibility.Visible;
+                selectAllCheckBox.Visibility = Visibility.Visible;
                 saveButton.IsEnabled = true;
             }
             else
@@ -214,6 +215,7 @@ namespace IptvFtw
                 playlistName.Visibility = Visibility.Collapsed;
                 includeChannelsCaption.Visibility = Visibility.Collapsed;
                 includeChannelsListView.Visibility = Visibility.Collapsed;
+                selectAllCheckBox.Visibility = Visibility.Collapsed;
                 saveButton.IsEnabled = false;
             }
         }
@@ -719,6 +721,23 @@ namespace IptvFtw
                 var checkBox = FindChildByName<CheckBox>(container, "includeChannelCheckBox");
                 checkBox?.Focus(FocusState.Programmatic);
             }
+
+            // Set the Select All checkbox state based on whether all channels are included or not
+            if (unsavedPlaylist.Channels != null)
+            {
+                if (unsavedPlaylist.Channels.All(c => c.Included))
+                {
+                    selectAllCheckBox.IsChecked = true;
+                }
+                else if (unsavedPlaylist.Channels.All(c => !c.Included))
+                {
+                    selectAllCheckBox.IsChecked = false;
+                }
+                else
+                {
+                    selectAllCheckBox.IsChecked = null; // Indeterminate state
+                }
+            }
         }
 
         private void directoryRadioButton_Click(object sender, RoutedEventArgs e)
@@ -847,7 +866,7 @@ namespace IptvFtw
                 default:
                     unsavedPlaylist = new Playlist()
                     {
-                        Name = playlistUrlTextBox.Text,
+                        Name = Regex.Match(playlistUrlTextBox.Text, "[^/]+?(?=\\.[^.]+$|$)").Value,
                         Url = playlistUrlTextBox.Text
                     };
                     break;
@@ -882,6 +901,22 @@ namespace IptvFtw
             if (playlistsSecondaryCombo.SelectedIndex >= 0)
             {
                 await ApplyPlaylist();
+            }
+        }
+
+        private void selectAllCheckBox_Click(object sender, RoutedEventArgs e)
+        {
+            // Set all channels to included or not included based on the Select All checkbox state
+            if (unsavedPlaylist.Channels != null)
+            {
+                bool includeAll = selectAllCheckBox.IsChecked == true;
+                foreach (var channel in unsavedPlaylist.Channels)
+                {
+                    channel.Included = includeAll;
+                }
+                includeChannelsListView.ItemsSource = null;
+                includeChannelsListView.ItemsSource = unsavedPlaylist.Channels;
+
             }
         }
     }

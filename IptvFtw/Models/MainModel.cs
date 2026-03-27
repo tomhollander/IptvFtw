@@ -32,17 +32,6 @@ namespace IptvFtw.Models
             }
         }
 
-        private string _epgUrl { get; set; }
-        public string EpgUrl
-        {
-            get { return _epgUrl; }
-            set
-            {
-                _epgUrl = value;
-                RaisePropertyChanged(nameof(EpgUrl));
-            }
-        }
-
         public string LastChannelId { get; set; }
 
         private Channel _selectedChannel;

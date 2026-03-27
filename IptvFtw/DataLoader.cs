@@ -38,7 +38,7 @@ namespace IptvFtw
                     }
 
                     var line = playlistLines[i];
-                    if (line.StartsWith("#EXTINF:-1 "))
+                    if (line.StartsWith("#EXTINF:-1"))
                     {
                         var lastComma = line.LastIndexOf(',');
                         string urlLine = null;
@@ -49,7 +49,7 @@ namespace IptvFtw
 
                         var channel = new Channel()
                         {
-                            Id = GetNamedMetadataAttribute(line, "channel-id") ?? GetNamedMetadataAttribute(line, "tvg-id"),
+                            Id = GetNamedMetadataAttribute(line, "channel-id") ?? GetNamedMetadataAttribute(line, "tvg-id") ?? splitUrlLine[0],
                             DisplayName = line.Substring(lastComma + 1),
                             GuideId = GetNamedMetadataAttribute(line, "tvg-id"),
                             ChannelNumber = GetNamedMetadataAttribute(line, "tvg-chno"),
@@ -60,12 +60,8 @@ namespace IptvFtw
                             Included = true,
                         };
 
-                        // Only show a max of 250 channels in this app, as some playlists are really big.
-                        //if (!channel.DisplayName.EndsWith(" Alt") && channels.Count < 250) 
-                        {
-                            channels.Add(channel);
-                        }
 
+                        channels.Add(channel);
 
                     }
                     i++;
@@ -105,7 +101,11 @@ namespace IptvFtw
         {
 
             model.TvPrograms = new List<TvProgram>();
-            var splitUrls = model.EpgUrl.Split(",");
+            var splitUrls = model.CurrentPlaylist?.EpgUrl?.Split(",");
+            if (splitUrls == null)
+            {
+                return;
+            }
             Parallel.ForEach(splitUrls, async url =>
             {
                 try
