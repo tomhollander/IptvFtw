@@ -89,10 +89,10 @@
                         <CheckBox x:Name="selectAllCheckBox" Content="Select All" Margin="12,0,0,5" Click="selectAllCheckBox_Click" />
                     </StackPanel>
 
-                    <ListView x:Name="includeChannelsListView"  Grid.Row="1" SelectionChanged="includeChannelsListView_SelectionChanged">
+                    <ListView x:Name="includeChannelsListView"  Grid.Row="1">
                         <ListView.ItemTemplate>
                             <DataTemplate>
-                                <CheckBox x:Name="includeChannelCheckBox" Content="{Binding DisplayName}" IsChecked="{Binding Included,Mode=TwoWay}"></CheckBox>
+                                <CheckBox x:Name="includeChannelCheckBox" Content="{Binding DisplayName}" IsChecked="{Binding Included,Mode=TwoWay}" Click="includeChannelCheckBox_Click"></CheckBox>
                             </DataTemplate>
                         </ListView.ItemTemplate>
                     </ListView>

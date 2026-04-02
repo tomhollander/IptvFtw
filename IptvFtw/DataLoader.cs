@@ -64,6 +64,20 @@ namespace IptvFtw
                         channels.Add(channel);
 
                     }
+                    else if (line.StartsWith("#EXT-X-STREAM-INF"))
+                    {
+                        // Not a playlist but a single channel, but we'll let them play it if they want...
+                        var channel = new Channel()
+                        {
+                            Id = Guid.NewGuid().ToString(),
+                            IconUrl = null,
+                            DisplayName = "Stream",
+                            StreamUrl = playlist.Url,
+                            Included = true,
+                        };
+                        channels.Add(channel);
+                        break;
+                    }
                     i++;
 
                 }

@@ -116,7 +116,8 @@ namespace IptvFtw
                 new DirectoryItem { Id = "https://i.mjh.nz/au/Melbourne/kodi-tv.m3u8", Name = "AU - Melbourne" },
                 new DirectoryItem { Id = "https://i.mjh.nz/au/Perth/kodi-tv.m3u8", Name = "AU - Perth" },
                 new DirectoryItem { Id = "https://i.mjh.nz/au/Sydney/kodi-tv.m3u8", Name = "AU - Sydney" },
-                new DirectoryItem { Id = "https://i.mjh.nz/nz/kodi-tv.m3u8", Name = "New Zealand" }
+                new DirectoryItem { Id = "https://i.mjh.nz/nz/kodi-tv.m3u8", Name = "New Zealand" },
+                new DirectoryItem { Id = "https://i.mjh.nz/world/raw.m3u8", Name = "World" }
             };
 
             _model.PrimaryDirectoryItems = ipTvOrgCategories;
@@ -713,30 +714,21 @@ namespace IptvFtw
             ShowControls();
         }
 
-        private void includeChannelsListView_SelectionChanged(object sender, SelectionChangedEventArgs e)
-        {
-            // Focus the checkbox inside the selected container
-            if (includeChannelsListView.ContainerFromItem(includeChannelsListView.SelectedItem) is ListViewItem container)
-            {
-                var checkBox = FindChildByName<CheckBox>(container, "includeChannelCheckBox");
-                checkBox?.Focus(FocusState.Programmatic);
-            }
 
-            // Set the Select All checkbox state based on whether all channels are included or not
-            if (unsavedPlaylist.Channels != null)
+
+        private void SetSaveButtonEnabledStateForSelectedChannels()
+        {
+           // Disable the save button if more than 1000 channels are selected to avoid performance issues with loading/saving and potential crashes
+            if (unsavedPlaylist.Channels != null && unsavedPlaylist.Channels.Count(c => c.Included) > 1000)
             {
-                if (unsavedPlaylist.Channels.All(c => c.Included))
-                {
-                    selectAllCheckBox.IsChecked = true;
-                }
-                else if (unsavedPlaylist.Channels.All(c => !c.Included))
-                {
-                    selectAllCheckBox.IsChecked = false;
-                }
-                else
-                {
-                    selectAllCheckBox.IsChecked = null; // Indeterminate state
-                }
+                saveButton.IsEnabled = false;
+                playlistErrorTextBlock.Text = "You cannot include more than 1000 channels in a playlist. Please deselect some channels before saving.";
+                playlistErrorTextBlock.Visibility = Visibility.Visible;
+            }
+            else
+            {
+                saveButton.IsEnabled = true;
+                playlistErrorTextBlock.Visibility = Visibility.Collapsed;
             }
         }
 
@@ -879,7 +871,13 @@ namespace IptvFtw
                 if (unsavedPlaylist.Channels?.Count > 0)
                 {
                     SetAddEditPanelMode(null, true);
+                    if (unsavedPlaylist.Channels.Count > 1000)
+                    {
+                        // Deselect all channels after the first 1000
+                        unsavedPlaylist.Channels.Skip(1000).ToList().ForEach(c => c.Included = false); 
+                    }
                     includeChannelsListView.ItemsSource = unsavedPlaylist.Channels;
+                    SetSaveButtonEnabledStateForSelectedChannels();
                 }
                 else
                 {
@@ -918,6 +916,37 @@ namespace IptvFtw
                 includeChannelsListView.ItemsSource = unsavedPlaylist.Channels;
 
             }
+            SetSaveButtonEnabledStateForSelectedChannels();
+        }
+
+        private void includeChannelCheckBox_Click(object sender, RoutedEventArgs e)
+        {
+            // Focus the checkbox inside the selected container
+            if (includeChannelsListView.ContainerFromItem(includeChannelsListView.SelectedItem) is ListViewItem container)
+            {
+                var checkBox = FindChildByName<CheckBox>(container, "includeChannelCheckBox");
+                checkBox?.Focus(FocusState.Programmatic);
+            }
+
+            // Set the Select All checkbox state based on whether all channels are included or not
+            if (unsavedPlaylist.Channels != null)
+            {
+                if (unsavedPlaylist.Channels.All(c => c.Included))
+                {
+                    selectAllCheckBox.IsChecked = true;
+                }
+                else if (unsavedPlaylist.Channels.All(c => !c.Included))
+                {
+                    selectAllCheckBox.IsChecked = false;
+                }
+                else
+                {
+                    selectAllCheckBox.IsChecked = null; // Indeterminate state
+                }
+            }
+
+            // Prevent saving of playlists > 1000 channels
+            SetSaveButtonEnabledStateForSelectedChannels();
         }
     }
 
